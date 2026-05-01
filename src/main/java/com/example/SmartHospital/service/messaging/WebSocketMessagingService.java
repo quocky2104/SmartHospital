@@ -1,4 +1,4 @@
-package com.example.SmartHospital.service;
+package com.example.SmartHospital.service.messaging;
 
 import org.springframework.stereotype.Service;
 
@@ -45,6 +45,15 @@ public class WebSocketMessagingService {
         messagingTemplate.convertAndSendToUser(
             receiverId, 
             "/queue/typing", 
+            response
+        );
+    }
+
+    public <T> void sendAppointmentNotification(String senderId, String receiverId, T response) {
+        log.info("Sending appointment notification from user {} to user {}: {}", senderId, receiverId, response);
+        messagingTemplate.convertAndSendToUser(
+            receiverId,
+            "/queue/appointments",
             response
         );
     }

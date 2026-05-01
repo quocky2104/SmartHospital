@@ -10,7 +10,7 @@ import com.example.SmartHospital.enums.MessageStatus;
 import com.example.SmartHospital.model.DoctorPatientMessages;
 
 @Repository
-public interface ChatRepository extends JpaRepository<DoctorPatientMessages, String> {
+public interface DoctorPatientChatRepository extends JpaRepository<DoctorPatientMessages, String> {
     List<DoctorPatientMessages> findByDoctor_IdAndPatient_IdOrderByTimestampAsc(String doctorId, String patientId);
     List<DoctorPatientMessages> findByDoctorId(String doctorId);
     List<DoctorPatientMessages> findByPatientId(String patientId);

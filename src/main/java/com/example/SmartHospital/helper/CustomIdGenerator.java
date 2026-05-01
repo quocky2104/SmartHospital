@@ -61,6 +61,10 @@ public class CustomIdGenerator {
         return "DCM-" + randomShortUUID();
     }
 
+    public static String generateNotificationId() {
+        return "NTF-" + randomShortUUID();
+    }
+
     // Generate a random short UUID
     private static String randomShortUUID() {
         return UUID.randomUUID().toString().split("-")[0].toUpperCase();

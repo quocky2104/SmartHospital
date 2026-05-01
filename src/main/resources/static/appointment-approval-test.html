@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>SmartHospital | Doctor Appointment Approval Test</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+	<style>
+		:root {
+			--ink: #111b2a;
+			--muted: #5f7083;
+			--line: #d8e4ee;
+			--bg-a: #fff8ee;
+			--bg-b: #f2fff9;
+			--primary: #0d7aee;
+			--ok: #0f8a51;
+			--bad: #c83737;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			color: var(--ink);
+			font-family: "Manrope", sans-serif;
+			background:
+				radial-gradient(900px 420px at -5% -15%, #ffe6c7 0%, transparent 65%),
+				radial-gradient(860px 420px at 110% 0%, #d8ffe9 0%, transparent 62%),
+				linear-gradient(145deg, var(--bg-a), var(--bg-b));
+			padding: 22px 14px;
+		}
+
+		.shell { max-width: 1140px; margin: 0 auto; }
+		.hero { margin-bottom: 12px; }
+
+		.tag {
+			display: inline-block;
+			padding: 7px 11px;
+			border: 1px solid #efd9b9;
+			border-radius: 999px;
+			background: rgba(255,255,255,0.8);
+			font: 700 11px/1 "Space Grotesk", sans-serif;
+			text-transform: uppercase;
+			letter-spacing: 0.07em;
+			color: #825116;
+		}
+
+		h1 {
+			margin: 9px 0 7px;
+			font: 700 clamp(1.45rem, 2.5vw, 2.25rem)/1.1 "Space Grotesk", sans-serif;
+			letter-spacing: -0.02em;
+		}
+
+		.subtitle { margin: 0; color: var(--muted); }
+
+		.card {
+			border: 1px solid var(--line);
+			border-radius: 18px;
+			background: rgba(255,255,255,0.9);
+			backdrop-filter: blur(6px);
+			box-shadow: 0 10px 26px rgba(14, 49, 86, 0.1);
+			padding: 15px;
+		}
+
+		.grid { display: grid; gap: 10px; }
+		.grid.two { grid-template-columns: 1fr 1fr; }
+
+		.field { display: grid; gap: 6px; }
+		label { font-size: 0.84rem; font-weight: 800; color: #253850; }
+		input, textarea {
+			width: 100%;
+			border: 1px solid #d6e2ed;
+			border-radius: 11px;
+			padding: 10px 11px;
+			font: 500 0.93rem/1.25 "Manrope", sans-serif;
+			outline: none;
+			color: #1b2a3a;
+		}
+		input:focus, textarea:focus {
+			border-color: #8ab7f3;
+			box-shadow: 0 0 0 4px rgba(13, 122, 238, 0.12);
+		}
+		textarea { min-height: 82px; resize: vertical; }
+
+		.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+		.btn {
+			border: 0;
+			border-radius: 11px;
+			padding: 9px 13px;
+			font: 700 0.84rem/1 "Space Grotesk", sans-serif;
+			letter-spacing: 0.02em;
+			cursor: pointer;
+		}
+		.btn.primary { background: linear-gradient(110deg, #0d7aee, #3da4ff); color: #fff; }
+		.btn.accept { background: #ecfff4; border: 1px solid #bfe8cf; color: #0f7c4a; }
+		.btn.cancel { background: #fff0f0; border: 1px solid #f0c2c2; color: #a13030; }
+		.btn.secondary { background: #eef6ff; border: 1px solid #cce1f7; color: #0d589f; }
+
+		.status {
+			margin-top: 10px;
+			border: 1px solid #d4e2ef;
+			border-radius: 12px;
+			padding: 10px;
+			background: #f2f8ff;
+			color: #164c80;
+			white-space: pre-wrap;
+			font-size: 0.9rem;
+		}
+		.status.ok { background: #e9fff3; color: var(--ok); border-color: #bde8cd; }
+		.status.error { background: #fff0f0; color: var(--bad); border-color: #f0c4c4; }
+
+		.table-wrap {
+			margin-top: 10px;
+			border: 1px solid #d7e3ee;
+			border-radius: 13px;
+			background: #fff;
+			overflow: auto;
+		}
+		table { width: 100%; border-collapse: collapse; min-width: 860px; font-size: 0.87rem; }
+		th, td { border-bottom: 1px solid #edf2f6; padding: 9px 10px; text-align: left; vertical-align: top; }
+		th { background: #f3f8fe; color: #35506b; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+		.pill {
+			display: inline-block;
+			border-radius: 999px;
+			padding: 4px 8px;
+			font: 800 0.68rem/1 "Space Grotesk", sans-serif;
+			letter-spacing: 0.05em;
+		}
+		.pill.PENDING { background: #fff2dc; color: #8a5200; }
+		.pill.SCHEDULED { background: #e3f0ff; color: #0c4b97; }
+		.pill.CANCELLED { background: #ffe3e3; color: #8f2424; }
+		.pill.COMPLETED { background: #e1f8ea; color: #0d6a3e; }
+
+		.modal-backdrop {
+			position: fixed;
+			inset: 0;
+			background: rgba(11, 20, 31, 0.42);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			padding: 14px;
+			z-index: 20;
+		}
+
+		.modal {
+			width: min(660px, 100%);
+			border-radius: 16px;
+			border: 1px solid #d8e3ed;
+			background: #fff;
+			padding: 14px;
+		}
+
+		.slots {
+			margin-top: 8px;
+			border: 1px solid #d8e4ef;
+			border-radius: 13px;
+			background: #f9fcff;
+			padding: 10px;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+			gap: 8px;
+			max-height: 240px;
+			overflow: auto;
+		}
+		.slot {
+			border: 1px solid #d8e4ef;
+			border-radius: 9px;
+			background: #fff;
+			text-align: center;
+			padding: 8px;
+			font-size: 0.83rem;
+			cursor: pointer;
+			user-select: none;
+		}
+		.slot.selected { border-color: #0d7aee; background: #deecff; font-weight: 800; }
+
+		@media (max-width: 900px) {
+			.grid.two { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+<body>
+	<main class="shell">
+		<section class="hero">
+			<span class="tag">Doctor Flow Test</span>
+			<h1>Approve, cancel, and reschedule appointments</h1>
+			<p class="subtitle">Use doctor token to view your appointments and apply actions. Reschedule uses date picker calendar + 30-minute block selection.</p>
+		</section>
+
+		<section class="card">
+			<div class="grid">
+				<div class="grid two">
+					<div class="field">
+						<label for="token">JWT token (DOCTOR)</label>
+						<textarea id="token" placeholder="Paste token or Bearer token"></textarea>
+					</div>
+					<div class="field">
+						<label for="search">Search by patient name/email</label>
+						<input id="search" type="text" placeholder="Optional search" />
+						<div class="btn-row">
+							<button id="loadBtn" class="btn primary" type="button" style="display:none">Load appointments</button>
+							<button id="connectWsBtn" class="btn ghost" type="button">Connect notifications</button>
+							<button id="disconnectWsBtn" class="btn ghost" type="button" style="display:none">Disconnect notifications</button>
+						</div>
+					</div>
+				</div>
+				<div id="status" class="status">Ready.</div>
+				<div style="margin-top:10px; border:1px solid #dce9f5; border-radius:14px; background:#fbfeff; padding:12px;">
+					<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+						<div style="font-weight:800;">Notifications <span id="notifUnreadBadge" style="display:inline-block; margin-left:6px; padding:2px 7px; border-radius:999px; background:#ffe5b7; color:#815200; font-size:11px; vertical-align:middle;">0 unread</span></div>
+						<div class="btn-row">
+							<button id="refreshNotificationsBtn" class="btn secondary" type="button" style="display:none">Refresh</button>
+							<button id="markAllReadBtn" class="btn ghost" type="button">Mark all read</button>
+							<button id="showAllNotificationsBtn" class="btn secondary" type="button">All</button>
+							<button id="showUnreadNotificationsBtn" class="btn secondary" type="button">Unread</button>
+						</div>
+					</div>
+					<div id="notifList" style="max-height:180px; overflow:auto; border:1px solid #f0f6fb; border-radius:10px; padding:8px; background:#fff">No notifications yet.</div>
+				</div>
+
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Patient</th>
+								<th>Date</th>
+								<th>Time</th>
+								<th>Status</th>
+								<th>Notes</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="appointmentsBody">
+							<tr><td colspan="7">No appointments loaded.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<div id="rescheduleBackdrop" class="modal-backdrop">
+		<div class="modal">
+			<h3 style="margin:0 0 10px; font-family:'Space Grotesk',sans-serif;">Doctor Reschedule</h3>
+			<div class="grid two">
+				<div class="field">
+					<label for="rescheduleDate">New date</label>
+					<input id="rescheduleDate" type="date" />
+				</div>
+				<div class="field">
+					<label for="rescheduleReason">Reason</label>
+					<input id="rescheduleReason" type="text" placeholder="Doctor requested schedule update" />
+				</div>
+			</div>
+			<div class="field" style="margin-top:10px;">
+				<label>Pick new 30-minute block</label>
+				<div id="rescheduleBlocks" class="slots"></div>
+			</div>
+			<div class="btn-row" style="margin-top:10px;">
+				<button id="confirmRescheduleBtn" class="btn primary" type="button">Confirm reschedule</button>
+				<button id="closeRescheduleBtn" class="btn secondary" type="button">Close</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const tokenEl = document.getElementById("token");
+		const searchEl = document.getElementById("search");
+		const loadBtn = document.getElementById("loadBtn");
+		const statusEl = document.getElementById("status");
+		const appointmentsBody = document.getElementById("appointmentsBody");
+		const notifList = document.getElementById("notifList");
+		const notifUnreadBadge = document.getElementById("notifUnreadBadge");
+		const refreshNotificationsBtn = document.getElementById("refreshNotificationsBtn");
+		const markAllReadBtn = document.getElementById("markAllReadBtn");
+		const showAllNotificationsBtn = document.getElementById("showAllNotificationsBtn");
+		const showUnreadNotificationsBtn = document.getElementById("showUnreadNotificationsBtn");
+
+		const rescheduleBackdrop = document.getElementById("rescheduleBackdrop");
+		const rescheduleDateEl = document.getElementById("rescheduleDate");
+		const rescheduleReasonEl = document.getElementById("rescheduleReason");
+		const rescheduleBlocksEl = document.getElementById("rescheduleBlocks");
+		const confirmRescheduleBtn = document.getElementById("confirmRescheduleBtn");
+		const closeRescheduleBtn = document.getElementById("closeRescheduleBtn");
+
+		const SLOT_START_HOUR = 7;
+		const SLOT_END_HOUR = 20;
+
+		let selectedRescheduleBlock = "";
+		let targetAppointmentId = "";
+		let notificationFilter = "all";
+		let notificationItems = [];
+		let notificationPollId = null;
+
+		const today = new Date().toISOString().slice(0, 10);
+		rescheduleDateEl.min = today;
+
+		function setStatus(text, type) {
+			statusEl.textContent = text;
+			statusEl.className = "status" + (type ? " " + type : "");
+		}
+
+		function normalizeToken(raw) {
+			const clean = (raw || "").trim();
+			if (clean.toLowerCase().startsWith("bearer ")) return clean.slice(7).trim();
+			return clean;
+		}
+
+		function authHeaders() {
+			const token = normalizeToken(tokenEl.value);
+			if (!token) throw new Error("DOCTOR token is required.");
+			return {
+				"Content-Type": "application/json",
+				"Authorization": "Bearer " + token
+			};
+		}
+
+		function mapPageResponse(res) {
+			if (Array.isArray(res?.data?.content)) return res.data.content;
+			if (Array.isArray(res?.result?.content)) return res.result.content;
+			return [];
+		}
+
+		function normalizeNotificationItem(item) {
+			return {
+				id: item?.id || item?.notificationId || item?.appointmentId || `${item?.type || 'notification'}-${item?.createdAt || ''}`,
+				type: item?.type || item?.eventType || 'appointment',
+				title: item?.title || item?.eventType || 'Appointment update',
+				message: item?.message || '',
+				appointmentId: item?.appointmentId || '',
+				isRead: Boolean(item?.isRead),
+				createdAt: item?.createdAt || item?.appointmentDateTime || ''
+			};
+		}
+
+		async function fetchJson(path, options) {
+			const resp = await fetch(path, options);
+			const data = await resp.json();
+			if (!resp.ok) throw new Error(data?.message || 'Request failed.');
+			return data?.data ?? data?.result ?? data;
+		}
+
+		// simple debounce helper
+		function debounce(fn, wait = 300) {
+			let t = null;
+			return function(...args) {
+				clearTimeout(t);
+				t = setTimeout(() => fn.apply(this, args), wait);
+			};
+		}
+
+		function formatNotificationTime(value) {
+			if (!value) return '';
+			const dt = new Date(value);
+			return Number.isNaN(dt.getTime()) ? String(value) : dt.toLocaleString();
+		}
+
+		function notificationLabel(item) {
+			return item.isRead ? 'Read' : 'Unread';
+		}
+
+		function renderNotifications() {
+			const items = notificationItems.filter((item) => notificationFilter === 'all' ? true : !item.isRead);
+			if (!items.length) {
+				notifList.innerHTML = `<div style="padding:8px; color:#6f8093;">No ${notificationFilter === 'unread' ? 'unread ' : ''}notifications.</div>`;
+				return;
+			}
+
+			notifList.innerHTML = items.map((item) => {
+				const actionBtn = item.isRead
+					? `<button class="btn secondary" data-notif-action="unread" data-notif-id="${item.id}" type="button">Mark unread</button>`
+					: `<button class="btn ghost" data-notif-action="read" data-notif-id="${item.id}" type="button">Mark read</button>`;
+				return `
+					<div style="padding:10px; border:1px solid #edf3f9; border-radius:10px; margin-bottom:8px; background:${item.isRead ? '#fff' : '#f0f7ff'};">
+						<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+							<div>
+								<div style="font-weight:800;">${item.title}</div>
+								<div style="font-size:12px; color:#597085; margin-top:3px;">${item.message || '-'}</div>
+								<div style="font-size:11px; color:#7a8ea2; margin-top:4px;">${formatNotificationTime(item.createdAt)}${item.appointmentId ? ` • Appointment ${item.appointmentId}` : ''}</div>
+							</div>
+							<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+								<span style="display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:800; background:${item.isRead ? '#e8f8ee' : '#ffe6b7'}; color:${item.isRead ? '#0e7a46' : '#8a5600'};">${notificationLabel(item)}</span>
+								${actionBtn}
+							</div>
+						</div>
+					</div>
+				`;
+			}).join('');
+		}
+
+		async function refreshNotifications() {
+			try {
+				const [list, unreadCount] = await Promise.all([
+					fetchJson('/notifications/my', { headers: authHeaders() }),
+					fetchJson('/notifications/my/unread-count', { headers: authHeaders() })
+				]);
+				notificationItems = Array.isArray(list) ? list.map(normalizeNotificationItem) : [];
+				notifUnreadBadge.textContent = `${unreadCount || 0} unread`;
+				renderNotifications();
+			} catch (err) {
+				notifList.innerHTML = '<div style="color:#9a4a4a;">Failed to load notifications.</div>';
+				setStatus(err.message, 'error');
+			}
+		}
+
+		async function markNotificationRead(notificationId) {
+			await fetchJson(`/notifications/${notificationId}/read`, { method: 'PATCH', headers: authHeaders() });
+			await refreshNotifications();
+		}
+
+		async function markNotificationUnread(notificationId) {
+			await fetchJson(`/notifications/${notificationId}/unread`, { method: 'PATCH', headers: authHeaders() });
+			await refreshNotifications();
+		}
+
+		async function markAllNotificationsRead() {
+			await fetchJson('/notifications/my/read-all', { method: 'PATCH', headers: authHeaders() });
+			await refreshNotifications();
+		}
+
+		function ensureNotificationPolling() {
+			if (notificationPollId) return;
+			notificationPollId = setInterval(() => {
+				if (tokenEl.value.trim()) {
+					refreshNotifications();
+				}
+			}, 15000);
+		}
+
+		function stopNotificationPolling() {
+			if (notificationPollId) {
+				clearInterval(notificationPollId);
+				notificationPollId = null;
+			}
+		}
+
+		function toTimeWithSeconds(hhmm) {
+			return hhmm + ":00";
+		}
+
+		function generateTimeBlocks() {
+			const out = [];
+			for (let h = SLOT_START_HOUR; h < SLOT_END_HOUR; h += 1) {
+				out.push(String(h).padStart(2, "0") + ":00");
+				out.push(String(h).padStart(2, "0") + ":30");
+			}
+			return out;
+		}
+
+		function renderRescheduleBlocks() {
+			const all = generateTimeBlocks();
+			rescheduleBlocksEl.innerHTML = "";
+			all.forEach((slot) => {
+				const div = document.createElement("div");
+				div.className = "slot" + (selectedRescheduleBlock === slot ? " selected" : "");
+				div.textContent = slot;
+				div.addEventListener("click", () => {
+					selectedRescheduleBlock = slot;
+					renderRescheduleBlocks();
+				});
+				rescheduleBlocksEl.appendChild(div);
+			});
+		}
+
+		function statusPill(status) {
+			return '<span class="pill ' + status + '">' + status + '</span>';
+		}
+
+		async function loadAppointments() {
+			try {
+				setStatus("Loading doctor appointments...", "");
+				const qs = new URLSearchParams({
+					search: searchEl.value.trim(),
+					page: "0",
+					size: "50",
+					sortBy: "appointmentDateTime",
+					direction: "desc"
+				});
+				const resp = await fetch("/appointment/doctor/getAppointments?" + qs.toString(), {
+					method: "GET",
+					headers: authHeaders()
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data?.message || "Failed to load appointments.");
+
+				const appointments = mapPageResponse(data);
+				if (!appointments.length) {
+					appointmentsBody.innerHTML = '<tr><td colspan="7">No appointments found.</td></tr>';
+					setStatus("No appointments found.", "");
+					return;
+				}
+
+				appointmentsBody.innerHTML = appointments.map((a) => {
+					const actions = [];
+					if (a.status === "PENDING") {
+						actions.push('<button class="btn accept" data-action="accept" data-id="' + a.appointmentId + '">Accept</button>');
+					}
+					if (a.status === "PENDING" || a.status === "SCHEDULED") {
+						actions.push('<button class="btn cancel" data-action="cancel" data-id="' + a.appointmentId + '">Cancel</button>');
+						actions.push('<button class="btn secondary" data-action="reschedule" data-id="' + a.appointmentId + '">Reschedule</button>');
+					}
+
+					return '<tr>' +
+						'<td>' + a.appointmentId + '</td>' +
+						'<td>' + (a.patientName || "-") + '</td>' +
+						'<td>' + (a.appointmentDate || "-") + '</td>' +
+						'<td>' + String(a.appointmentTime || "-").slice(0,5) + '</td>' +
+						'<td>' + statusPill(a.status) + '</td>' +
+						'<td>' + (a.notes || a.cancelReason || "-") + '</td>' +
+						'<td>' + (actions.join(" ") || "-") + '</td>' +
+					'</tr>';
+				}).join("");
+
+				setStatus("Doctor appointments loaded.", "ok");
+				refreshNotifications();
+			} catch (err) {
+				appointmentsBody.innerHTML = '<tr><td colspan="7">Failed to load data.</td></tr>';
+				setStatus(err.message, "error");
+			}
+		}
+
+		async function acceptAppointment(appointmentId) {
+			try {
+				const resp = await fetch("/appointment/acceptAppointment", {
+					method: "POST",
+					headers: authHeaders(),
+					body: JSON.stringify({ appointmentId })
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data?.message || "Accept failed.");
+				setStatus("Appointment accepted.", "ok");
+				await loadAppointments();
+				await refreshNotifications();
+			} catch (err) {
+				setStatus(err.message, "error");
+			}
+		}
+
+		async function cancelAppointment(appointmentId) {
+			const reason = prompt("Cancellation reason:", "Doctor unavailable at this time");
+			if (reason === null) return;
+			try {
+				const resp = await fetch("/appointment/cancelAppointment", {
+					method: "POST",
+					headers: authHeaders(),
+					body: JSON.stringify({
+						appointmentId,
+						cancelReason: reason.trim() || "No reason"
+					})
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data?.message || "Cancel failed.");
+				setStatus("Appointment cancelled.", "ok");
+				await loadAppointments();
+				await refreshNotifications();
+			} catch (err) {
+				setStatus(err.message, "error");
+			}
+		}
+
+		function openRescheduleModal(appointmentId) {
+			targetAppointmentId = appointmentId;
+			selectedRescheduleBlock = "";
+			rescheduleReasonEl.value = "";
+			rescheduleDateEl.value = today;
+			renderRescheduleBlocks();
+			rescheduleBackdrop.style.display = "flex";
+		}
+
+		function closeRescheduleModal() {
+			rescheduleBackdrop.style.display = "none";
+		}
+
+		async function confirmReschedule() {
+			try {
+				if (!targetAppointmentId) throw new Error("No appointment selected.");
+				if (!rescheduleDateEl.value) throw new Error("Select a new date.");
+				if (!selectedRescheduleBlock) throw new Error("Select a new time block.");
+
+				const payload = {
+					appointmentId: targetAppointmentId,
+					newAppointmentDate: rescheduleDateEl.value,
+					newAppointmentTime: toTimeWithSeconds(selectedRescheduleBlock),
+					reason: rescheduleReasonEl.value.trim() || "Doctor rescheduled"
+				};
+
+				const resp = await fetch("/appointment/rescheduleAppointment", {
+					method: "POST",
+					headers: authHeaders(),
+					body: JSON.stringify(payload)
+				});
+				const data = await resp.json();
+				if (!resp.ok) throw new Error(data?.message || "Reschedule failed.");
+
+				closeRescheduleModal();
+				setStatus("Appointment rescheduled.", "ok");
+				await loadAppointments();
+				await refreshNotifications();
+			} catch (err) {
+				setStatus(err.message, "error");
+			}
+		}
+
+		loadBtn.addEventListener("click", loadAppointments);
+		refreshNotificationsBtn.addEventListener("click", refreshNotifications);
+		markAllReadBtn.addEventListener("click", markAllNotificationsRead);
+		showAllNotificationsBtn.addEventListener("click", () => { notificationFilter = 'all'; renderNotifications(); });
+		showUnreadNotificationsBtn.addEventListener("click", () => { notificationFilter = 'unread'; renderNotifications(); });
+		closeRescheduleBtn.addEventListener("click", closeRescheduleModal);
+		confirmRescheduleBtn.addEventListener("click", confirmReschedule);
+
+		appointmentsBody.addEventListener("click", (e) => {
+			const btn = e.target.closest("button");
+			if (!btn) return;
+			const action = btn.getAttribute("data-action");
+			const id = btn.getAttribute("data-id");
+			if (action === "accept") acceptAppointment(id);
+			if (action === "cancel") cancelAppointment(id);
+			if (action === "reschedule") openRescheduleModal(id);
+		});
+
+		notifList.addEventListener('click', async (e) => {
+			const btn = e.target.closest('button[data-notif-action]');
+			if (!btn) return;
+			const notificationId = btn.getAttribute('data-notif-id');
+			const action = btn.getAttribute('data-notif-action');
+			try {
+				if (action === 'read') await markNotificationRead(notificationId);
+				if (action === 'unread') await markNotificationUnread(notificationId);
+			} catch (err) {
+				setStatus(err.message, 'error');
+			}
+		});
+
+		renderRescheduleBlocks();
+
+		// --- Realtime notifications (STOMP over SockJS) ---
+		const connectWsBtn = document.getElementById('connectWsBtn');
+		const disconnectWsBtn = document.getElementById('disconnectWsBtn');
+		let stompClient = null;
+		let stompSub = null;
+
+		function addNotificationItem(payload) {
+			try {
+				const p = typeof payload === 'string' ? JSON.parse(payload) : payload;
+				const el = document.createElement('div');
+				el.style.padding = '8px';
+				el.style.borderBottom = '1px solid #eef6fb';
+				el.innerHTML = '<strong>' + (p.eventType || 'event') + '</strong> — ' + (p.message || '') + '<br/><small>Appointment: ' + (p.appointmentId || '-') + ' • ' + (p.appointmentDateTime || '') + '</small>';
+				if (notifList.textContent.trim() === 'No notifications yet.') notifList.innerHTML = '';
+				notifList.insertBefore(el, notifList.firstChild);
+			} catch (e) {
+				console.warn('Invalid notification payload', e);
+			}
+		}
+
+		async function connectNotifications() {
+			try {
+				const token = normalizeToken(tokenEl.value);
+				if (!token) throw new Error('DOCTOR token is required for notifications.');
+				if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
+					await loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js');
+					await loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js');
+				}
+				const socket = new SockJS('/ws');
+				stompClient = Stomp.over(socket);
+				stompClient.debug = null;
+				stompClient.connect({ Authorization: 'Bearer ' + token }, function(frame) {
+					setStatus('Connected to notifications', 'ok');
+					connectWsBtn.style.display = 'none';
+					disconnectWsBtn.style.display = '';
+					stompSub = stompClient.subscribe('/user/queue/appointments', function(message) {
+						refreshNotifications();
+						// also refresh appointments list when appointment-related notifications arrive
+						try { loadAppointments().catch(()=>{}); } catch(e) { }
+					});
+					refreshNotifications();
+					ensureNotificationPolling();
+				}, function(error) {
+					setStatus('Notifications connection failed: ' + (error && error.headers ? error.headers.message : (error || '')), 'error');
+				});
+			} catch (err) {
+				setStatus(err.message, 'error');
+			}
+		}
+
+		function disconnectNotifications() {
+			try {
+				if (stompSub) stompSub.unsubscribe();
+				if (stompClient) stompClient.disconnect(() => {
+					setStatus('Disconnected from notifications', '');
+					connectWsBtn.style.display = '';
+					disconnectWsBtn.style.display = 'none';
+					stopNotificationPolling();
+				});
+			} catch (e) {
+				connectWsBtn.style.display = '';
+				disconnectWsBtn.style.display = 'none';
+				stopNotificationPolling();
+			}
+		}
+
+		function loadScript(src) {
+			return new Promise((res, rej) => {
+				const s = document.createElement('script');
+				s.src = src;
+				s.onload = res;
+				s.onerror = rej;
+				document.head.appendChild(s);
+			});
+		}
+
+		connectWsBtn.addEventListener('click', connectNotifications);
+		disconnectWsBtn.addEventListener('click', disconnectNotifications);
+
+		// Auto-behaviors: when doctor token is provided, auto-load appointments, notifications and try to connect WS
+		tokenEl.addEventListener('input', debounce(() => {
+			if (!tokenEl.value.trim()) return;
+			try {
+				loadAppointments().catch(()=>{});
+				refreshNotifications().catch(()=>{});
+				if (!stompClient) connectNotifications().catch(()=>{});
+			} catch (e) {}
+		}, 600));
+	</script>
+</body>
+</html>

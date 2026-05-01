@@ -72,6 +72,7 @@
             <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
 
+        <!-- Redis Session -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-session-data-redis</artifactId>
@@ -134,12 +135,24 @@
             <version>8.6.0</version>
         </dependency>
 
+        <!-- Excel (.xls/.xlsx) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
+			<version>3.0.3</version>
         </dependency>
+        <!-- Actuator -->
+        <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
 
         <!-- env -->
         <dependency>

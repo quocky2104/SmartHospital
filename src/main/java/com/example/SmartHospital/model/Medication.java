@@ -1,6 +1,7 @@
 package com.example.SmartHospital.model;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 import com.example.SmartHospital.helper.CustomIdGenerator;
 
@@ -31,6 +32,11 @@ public class Medication {
     private String dosage;
     private String duration;
     private String frequency;
+    private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
 
     @ManyToMany(mappedBy = "medicines")
     private List<Prescription> prescriptions;

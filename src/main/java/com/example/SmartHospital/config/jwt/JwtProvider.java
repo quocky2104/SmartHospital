@@ -139,7 +139,7 @@ public class JwtProvider {
             throw new IllegalArgumentException("JWT token does not contain userId claim");
         }
 
-        List<String> roles = claims.get("roles", List.class);
+        List<?> roles = claims.get("roles", List.class);
         if (roles == null) {
             throw new IllegalArgumentException("JWT token does not contain roles claim");
         }
@@ -147,10 +147,11 @@ public class JwtProvider {
         // Convert roles to Spring Security authorities
         var authorities = roles.stream()
             .map(role -> {
-                if (!role.startsWith("ROLE_")) {
-                    role = "ROLE_" + role;
+                String roleName = role.toString();
+                if (!roleName.startsWith("ROLE_")) {
+                    roleName = "ROLE_" + roleName;
                 }
-                return new SimpleGrantedAuthority(role);
+                return new SimpleGrantedAuthority(roleName);
             })
             .toList();
 
@@ -164,10 +165,10 @@ public class JwtProvider {
     }
     // Get role from token
     public String getRoleFromToken(String token) {
-        List<String> roles = getClaims(token).get("roles", List.class);
+        List<?> roles = getClaims(token).get("roles", List.class);
         if (roles == null || roles.isEmpty()) {
             throw new IllegalArgumentException("JWT token does not contain roles claim");
         }
-        return roles.get(0); // Assuming a user has only one role, return the first one
+        return roles.get(0).toString(); // Assuming a user has only one role, return the first one
     }
 }

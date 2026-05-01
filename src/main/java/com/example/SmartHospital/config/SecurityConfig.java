@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,13 +14,15 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import com.example.SmartHospital.config.jwt.JwtAuthenticationFilter;
-import com.example.SmartHospital.service.CustomUserDetailsService;
+import com.example.SmartHospital.service.user.CustomUserDetailsService;
 
 import lombok.RequiredArgsConstructor;
 
 @Configuration 
-@EnableWebSecurity
+@EnableWebSecurity // Enable Spring Security's web security support
+@EnableMethodSecurity(prePostEnabled = true) // Enable method-level security with @PreAuthorize annotations
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -51,7 +54,9 @@ public class SecurityConfig {
                     "/auth/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
-                    "/chat-test.html",
+                    "/chat-test.html", // remove this in production, only for testing
+                    "/appointment-approval-test.html", // remove this in production, only for testing
+                    "/appointment-booking-test.html", // remove this in production, only for testing
                     "/ws/**"
                 ).permitAll()
                     .anyRequest().authenticated())

@@ -2,7 +2,7 @@ spring:
   application:
     name: SmartHospital
   server:
-    port: 8080
+    port: ${SERVER_PORT:8080}
   cors:
     allowed-origins:
       - ${FRONTEND_URL}
@@ -21,15 +21,15 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       timeout: 60000
       lettuce:
         shutdown-timeout: 100
         
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     properties:
@@ -42,9 +42,9 @@ spring:
           ssl:
             trust: smtp.gmail.com 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   jpa:
     defer-datasource-initialization: true #Ensures DB is ready before JPA runs
     hibernate:
@@ -52,7 +52,7 @@ spring:
     show-sql: true #Logs SQL queries to console
 
 minio:
-  url: http://localhost:9000
+  url: ${MINIO_URL}
   accessKey: ${MINIO_USER}
   secretKey: ${MINIO_PASSWORD}
   bucket: avatars
@@ -66,6 +66,13 @@ jwt:
   otp:
     expiration: 300000 # 5 minutes
 
+app:
+  notifications:
+    rabbit:
+      # Keep enabled in production to avoid dropping events during websocket disconnects/restarts.
+      # We still send websocket notifications first, RabbitMQ acts as durable secondary delivery.
+      enabled: true
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -75,4 +82,4 @@ springdoc:
   api-docs:
     path: /v3/api-docs
     enabled: true
-  show-actuator: true
+  show-actuator: false

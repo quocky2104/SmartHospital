@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,13 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AcceptAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.CancelAppointmentRequest;
+import com.example.SmartHospital.dtos.AppointmentDtos.Request.RescheduleAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Response.Response.AppointmentResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.UserDtos.DoctorDTO;
-import com.example.SmartHospital.service.AppointmentService;
+import com.example.SmartHospital.service.appointment.AppointmentService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,10 @@ import lombok.extern.slf4j.Slf4j;
 public class AppointmentController {
     private final AppointmentService appointmentService;
 
+    @Operation(
+        summary = "Get patient's appointments",
+        description = "Retrieve a paginated list of appointments for the authenticated patient with optional search and sorting"
+    )
     @PreAuthorize("hasRole('PATIENT')")
     @GetMapping("/patient/getAppointments")
     public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getPatientAppointments(
@@ -64,6 +71,10 @@ public class AppointmentController {
         );
     }
 
+    @Operation(
+        summary = "Get doctor's appointments",
+        description = "Retrieve a paginated list of appointments for the authenticated doctor with optional search and sorting"
+    )
     @PreAuthorize("hasRole('DOCTOR')")
     @GetMapping("/doctor/getAppointments")
     public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getDoctorAppointments(
@@ -88,11 +99,18 @@ public class AppointmentController {
         );
     }
 
+    @Operation(
+        summary = "Create new appointment",
+        description = "Create a new appointment by selecting a doctor and an available timeslot. Patient specifies the appointment date, time, and optional notes"
+    )
     @PreAuthorize("hasRole('PATIENT')")
     @PostMapping("/createAppointment")
-    public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(@RequestBody AppointmentRequest request) {
+    public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(
+        @RequestBody AppointmentRequest request,
+        @AuthenticationPrincipal String userId
+    ) {
         try {
-            AppointmentResponse response = appointmentService.createAppointment(request);
+            AppointmentResponse response = appointmentService.createAppointment(request, userId);
             return ResponseEntity.ok(
                     new ApiResponse<>(200, "Appointment created successfully", response)
             );
@@ -102,12 +120,19 @@ public class AppointmentController {
         }
     }
 
-    @PreAuthorize("hasRole('DOCTOR')")
+    @Operation(
+        summary = "Cancel an appointment",
+        description = "Cancel an existing appointment. Both patient and doctor can cancel with an optional cancellation reason"
+    )
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
     @PostMapping("/cancelAppointment")
-    public ResponseEntity<ApiResponse<AppointmentResponse>> cancelAppointment(@RequestBody CancelAppointmentRequest request) {
+    public ResponseEntity<ApiResponse<AppointmentResponse>> cancelAppointment(
+        @RequestBody CancelAppointmentRequest request,
+        @AuthenticationPrincipal String userId
+    ) {
         try {
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "Appointment cancelled successfully", appointmentService.cancelAppointment(request))
+                    new ApiResponse<>(200, "Appointment cancelled successfully", appointmentService.cancelAppointment(request, userId))
             );
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -115,6 +140,30 @@ public class AppointmentController {
         }
     }
 
+    @Operation(
+        summary = "Reschedule an appointment",
+        description = "Change the date and/or time of an existing appointment. Both patient and doctor can reschedule with an optional reason"
+    )
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
+    @PostMapping("/rescheduleAppointment")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> rescheduleAppointment(
+        @RequestBody RescheduleAppointmentRequest request,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment rescheduled successfully", appointmentService.rescheduleAppointment(request, userId))
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to reschedule appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Accept a pending appointment",
+        description = "Doctor accepts a pending appointment request to confirm their availability"
+    )
     @PreAuthorize("hasRole('DOCTOR')")
     @PostMapping("/acceptAppointment")
     public ResponseEntity<ApiResponse<AppointmentResponse>> acceptAppointment(@RequestBody AcceptAppointmentRequest request) {
@@ -128,29 +177,20 @@ public class AppointmentController {
         }
     }
 
+    @Operation(
+        summary = "Get available doctors for a timeslot",
+        description = "Retrieve list of available doctors for a specific date and time. Filters by working hours and existing appointments"
+    )
     @GetMapping("/available-doctors") 
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN')") 
     public ResponseEntity<ApiResponse<List<DoctorDTO>>> getAvailableDoctors( 
-        @Schema(description = "Date of the appointment", example = "2023-05-01", format="date") 
-        @RequestParam LocalDate date, 
-        @Schema(description = "Time of the appointment", example = "10:00", format="time") 
-        @RequestParam LocalTime time ) { 
+        @Schema(description = "Date of the appointment", example = "2026-04-26", format = "date")
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @RequestParam LocalDate date,
+        @Schema(description = "Time slot in 24h format", example = "10:00:00", format = "time")
+        @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
+        @RequestParam LocalTime time ) {
             List<DoctorDTO> doctors = appointmentService.findAvailableDoctors(date, time); 
             return ResponseEntity.ok(new ApiResponse<>(200, "Available doctors retrieved", doctors)); 
-    }
-
-    @GetMapping("/available-timeslots")
-    @PreAuthorize("hasAnyRole('PATIENT', 'ADMIN')")
-    public ResponseEntity<ApiResponse<List<LocalTime>>> getAvailableTimeslots(
-        @RequestParam String doctorId,
-        @Schema(description = "Date of the appointment", example = "2023-05-01", format="date")
-        @RequestParam LocalDate date
-    ) {
-        try{
-            List<LocalTime> timeslots = appointmentService.getAvailableTimeslots(doctorId, date);
-            return ResponseEntity.ok(new ApiResponse<>(200, "Available timeslots retrieved", timeslots));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to get available timeslots", null));
-        }
     }
 }

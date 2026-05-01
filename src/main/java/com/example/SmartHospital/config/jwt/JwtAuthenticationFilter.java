@@ -2,6 +2,8 @@ package com.example.SmartHospital.config.jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.example.SmartHospital.service.token.RedisTokenService;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,8 +18,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import io.jsonwebtoken.*;
 
 import java.io.IOException;
-
-import com.example.SmartHospital.service.RedisTokenService;
 
 @Component
 @EnableWebSecurity

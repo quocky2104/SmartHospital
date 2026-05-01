@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartHospital | Patient Booking Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --ink: #0f1724;
+            --muted: #5d6c7d;
+            --card: #ffffff;
+            --line: #d7e4ef;
+            --bg-a: #eff8ff;
+            --bg-b: #f5fffa;
+            --primary: #0567ff;
+            --ok: #0b8850;
+            --bad: #d83f3f;
+            --pending: #f39a0b;
+            --scheduled: #1178d1;
+            --cancelled: #b83535;
+            --completed: #1e7f56;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: "Manrope", sans-serif;
+            background:
+                radial-gradient(920px 420px at -8% -18%, #d8ecff 0%, transparent 68%),
+                radial-gradient(920px 460px at 108% -8%, #d6ffe9 0%, transparent 64%),
+                linear-gradient(140deg, var(--bg-a), var(--bg-b));
+            padding: 22px 14px;
+        }
+
+        .shell { max-width: 1160px; margin: 0 auto; }
+
+        .hero { margin-bottom: 14px; }
+        .tag {
+            display: inline-block;
+            border-radius: 999px;
+            border: 1px solid #cfe2f2;
+            background: rgba(255,255,255,0.8);
+            padding: 7px 11px;
+            font: 700 11px/1 "Space Grotesk", sans-serif;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: #15538f;
+        }
+        h1 {
+            margin: 10px 0 6px;
+            font: 700 clamp(1.5rem, 2.6vw, 2.3rem)/1.1 "Space Grotesk", sans-serif;
+            letter-spacing: -0.02em;
+        }
+        .subtitle { margin: 0; color: var(--muted); }
+
+        .layout {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 1.06fr 1fr;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.9);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 16px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 26px rgba(16, 52, 93, 0.11);
+        }
+
+        .grid { display: grid; gap: 10px; }
+        .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+        .field { display: grid; gap: 6px; }
+        label { font-size: 0.84rem; font-weight: 800; color: #24354d; }
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid #d4e2ec;
+            border-radius: 11px;
+            padding: 10px 11px;
+            font: 500 0.93rem/1.25 "Manrope", sans-serif;
+            color: #1b2839;
+            background: #fff;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #76afff;
+            box-shadow: 0 0 0 4px rgba(5, 103, 255, 0.12);
+        }
+        textarea { min-height: 84px; resize: vertical; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            border: 0;
+            border-radius: 11px;
+            padding: 9px 13px;
+            font: 700 0.86rem/1 "Space Grotesk", sans-serif;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+        }
+        .btn.primary { background: linear-gradient(110deg, #0567ff, #2b8dff); color: #fff; }
+        .btn.secondary { background: #eaf3ff; color: #12528c; border: 1px solid #c9def8; }
+        .btn.ghost { background: #ecfff4; color: #1a7c4d; border: 1px solid #bce8d0; }
+        .btn.danger { background: #fff1f1; color: #a93030; border: 1px solid #efc4c4; }
+
+        .calendar-note { color: #60748a; font-size: 0.8rem; }
+
+        .slots {
+            border: 1px solid #d8e4ef;
+            border-radius: 13px;
+            background: #f9fcff;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+            gap: 8px;
+            max-height: 260px;
+            overflow: auto;
+        }
+
+        .slot {
+            border: 1px solid #d8e4ef;
+            border-radius: 9px;
+            padding: 8px;
+            background: #fff;
+            font-size: 0.84rem;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .slot.available { border-color: #87dcad; background: #ecfff4; }
+        .slot.unavailable { border-color: #f0c4c4; background: #fff1f1; cursor: not-allowed; color: #8e5f5f; }
+        .slot.selected { border-color: #0b66f0; background: #deebff; font-weight: 800; }
+
+        .status {
+            margin-top: 10px;
+            border: 1px solid #d4e2ef;
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            background: #f2f8ff;
+            color: #184a7d;
+        }
+        .status.ok { background: #e9fff3; color: var(--ok); border-color: #bfe9cf; }
+        .status.error { background: #fff0f0; color: var(--bad); border-color: #f0c2c2; }
+
+        .table-wrap {
+            border: 1px solid #d8e4ef;
+            border-radius: 13px;
+            overflow: auto;
+            background: #fff;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 840px; }
+        th, td { border-bottom: 1px solid #edf2f6; padding: 9px 10px; text-align: left; vertical-align: top; }
+        th { background: #f3f8fe; color: #35506b; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
+
+        .pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font: 800 0.68rem/1 "Space Grotesk", sans-serif;
+            letter-spacing: 0.05em;
+        }
+        .pill.PENDING { background: #fff2dc; color: #8a5200; }
+        .pill.SCHEDULED { background: #e3f0ff; color: #0c4b97; }
+        .pill.CANCELLED { background: #ffe3e3; color: #8f2424; }
+        .pill.COMPLETED { background: #e1f8ea; color: #0d6a3e; }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 20, 33, 0.42);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            z-index: 20;
+        }
+        .modal {
+            width: min(680px, 100%);
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #d6e2ee;
+            padding: 14px;
+        }
+
+        @media (max-width: 980px) {
+            .layout { grid-template-columns: 1fr; }
+            .grid.two { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <span class="tag">Patient Flow Test</span>
+            <h1>Book by calendar + 30-min blocks, then track status</h1>
+            <p class="subtitle">Pick a date from calendar popup, choose a time block, load available doctors, create appointment, and then cancel or reschedule from your appointment list.</p>
+        </section>
+
+        <section class="layout">
+            <section class="card">
+                <div class="grid">
+                    <div class="field">
+                        <label for="token">JWT token (PATIENT)</label>
+                        <textarea id="token" placeholder="Paste token or Bearer token"></textarea>
+                    </div>
+
+                    <div class="grid two">
+                        <div class="field">
+                            <label for="appointmentDate">Appointment date</label>
+                            <input id="appointmentDate" type="date" />
+                            <div class="calendar-note">Click the date field to open calendar popup.</div>
+                        </div>
+                        <div class="field">
+                            <label for="doctorIdSelect">Available doctors for selected block</label>
+                            <select id="doctorIdSelect">
+                                <option value="">Select date + block first</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Time blocks (30 minutes)</label>
+                        <div id="timeBlocks" class="slots"></div>
+                    </div>
+
+                    <div class="field">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" placeholder="Reason, symptoms, follow-up"></textarea>
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="loadAvailabilityBtn" class="btn secondary" type="button" style="display:none">Load doctors for block</button>
+                        <button id="bookBtn" class="btn primary" type="button">Create appointment</button>
+                        <button id="connectWsBtn" class="btn ghost" type="button">Connect notifications</button>
+                        <button id="disconnectWsBtn" class="btn ghost" type="button" style="display:none">Disconnect notifications</button>
+                    </div>
+                </div>
+
+                <div id="status" class="status">Ready.</div>
+
+                <div style="margin-top:10px; border:1px solid #dce9f5; border-radius:14px; background:#fbfeff; padding:12px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-weight:800;">Notifications <span id="notifUnreadBadge" style="display:inline-block; margin-left:6px; padding:2px 7px; border-radius:999px; background:#ffe5b7; color:#815200; font-size:11px; vertical-align:middle;">0 unread</span></div>
+                        <div class="btn-row">
+                                <button id="refreshNotificationsBtn" class="btn secondary" type="button" style="display:none">Refresh</button>
+                            <button id="markAllReadBtn" class="btn ghost" type="button">Mark all read</button>
+                            <button id="showAllNotificationsBtn" class="btn secondary" type="button">All</button>
+                            <button id="showUnreadNotificationsBtn" class="btn secondary" type="button">Unread</button>
+                        </div>
+                    </div>
+                    <div id="notifList" style="max-height:180px; overflow:auto; border:1px solid #e6eef8; border-radius:10px; padding:8px; background:#fff">No notifications yet.</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="grid">
+                    <div class="btn-row">
+                        <button id="refreshAppointmentsBtn" class="btn ghost" type="button" style="display:none">Refresh my appointments</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Doctor</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentsBody">
+                                <tr><td colspan="7">No data loaded yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <div id="rescheduleBackdrop" class="modal-backdrop">
+        <div class="modal">
+            <h3 style="margin: 0 0 10px; font-family: 'Space Grotesk', sans-serif;">Reschedule Appointment</h3>
+            <div class="grid two">
+                <div class="field">
+                    <label for="rescheduleDate">New date</label>
+                    <input id="rescheduleDate" type="date" />
+                </div>
+                <div class="field">
+                    <label for="rescheduleReason">Reason</label>
+                    <input id="rescheduleReason" type="text" placeholder="Need another slot" />
+                </div>
+            </div>
+            <div class="field" style="margin-top: 10px;">
+                <label>Pick new 30-minute block</label>
+                <div id="rescheduleBlocks" class="slots"></div>
+            </div>
+            <div class="btn-row" style="margin-top: 10px;">
+                <button id="confirmRescheduleBtn" class="btn primary" type="button">Confirm reschedule</button>
+                <button id="closeRescheduleBtn" class="btn secondary" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tokenEl = document.getElementById("token");
+        const dateEl = document.getElementById("appointmentDate");
+        const doctorSelectEl = document.getElementById("doctorIdSelect");
+        const notesEl = document.getElementById("notes");
+        const blocksEl = document.getElementById("timeBlocks");
+        const loadAvailabilityBtn = document.getElementById("loadAvailabilityBtn");
+        const bookBtn = document.getElementById("bookBtn");
+        const refreshAppointmentsBtn = document.getElementById("refreshAppointmentsBtn");
+        const appointmentsBody = document.getElementById("appointmentsBody");
+        const statusEl = document.getElementById("status");
+        const notifList = document.getElementById("notifList");
+        const notifUnreadBadge = document.getElementById("notifUnreadBadge");
+        const refreshNotificationsBtn = document.getElementById("refreshNotificationsBtn");
+        const markAllReadBtn = document.getElementById("markAllReadBtn");
+        const showAllNotificationsBtn = document.getElementById("showAllNotificationsBtn");
+        const showUnreadNotificationsBtn = document.getElementById("showUnreadNotificationsBtn");
+
+        const rescheduleBackdrop = document.getElementById("rescheduleBackdrop");
+        const rescheduleDateEl = document.getElementById("rescheduleDate");
+        const rescheduleReasonEl = document.getElementById("rescheduleReason");
+        const rescheduleBlocksEl = document.getElementById("rescheduleBlocks");
+        const confirmRescheduleBtn = document.getElementById("confirmRescheduleBtn");
+        const closeRescheduleBtn = document.getElementById("closeRescheduleBtn");
+
+        const SLOT_START_HOUR = 7;
+        const SLOT_END_HOUR = 20;
+
+        let selectedBlock = "";
+        let selectedRescheduleBlock = "";
+        let rescheduleTarget = { appointmentId: "", doctorName: "" };
+        let latestAvailability = [];
+        let notificationFilter = "all";
+        let notificationItems = [];
+        let notificationPollId = null;
+
+        const today = new Date().toISOString().slice(0, 10);
+        dateEl.min = today;
+        rescheduleDateEl.min = today;
+
+        function setStatus(text, type) {
+            statusEl.textContent = text;
+            statusEl.className = "status" + (type ? " " + type : "");
+        }
+
+        function normalizeToken(raw) {
+            const clean = (raw || "").trim();
+            if (clean.toLowerCase().startsWith("bearer ")) return clean.slice(7).trim();
+            return clean;
+        }
+
+        function authHeaders() {
+            const token = normalizeToken(tokenEl.value);
+            if (!token) throw new Error("PATIENT token is required.");
+            return {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            };
+        }
+
+        function toTimeWithSeconds(hhmm) {
+            return hhmm + ":00";
+        }
+
+        function generateTimeBlocks() {
+            const out = [];
+            for (let h = SLOT_START_HOUR; h < SLOT_END_HOUR; h += 1) {
+                out.push(String(h).padStart(2, "0") + ":00");
+                out.push(String(h).padStart(2, "0") + ":30");
+            }
+            return out;
+        }
+
+        function renderBlocks(container, activeValue, availableSet, unavailableHint) {
+            const all = generateTimeBlocks();
+            container.innerHTML = "";
+            all.forEach((slot) => {
+                const available = availableSet ? availableSet.has(slot) : true;
+                const div = document.createElement("div");
+                div.className = "slot " + (available ? "available" : "unavailable") + (activeValue === slot ? " selected" : "");
+                div.textContent = slot;
+                div.title = available ? "Click to select block" : unavailableHint;
+                if (available) {
+                    div.addEventListener("click", () => {
+                        if (container === blocksEl) {
+                            selectedBlock = slot;
+                            renderBlocks(blocksEl, selectedBlock, availableSet, unavailableHint);
+                        } else {
+                            selectedRescheduleBlock = slot;
+                            renderBlocks(rescheduleBlocksEl, selectedRescheduleBlock, availableSet, unavailableHint);
+                        }
+                    });
+                }
+                container.appendChild(div);
+            });
+        }
+
+        function clearDoctorOptions(message) {
+            doctorSelectEl.innerHTML = "";
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = message;
+            doctorSelectEl.appendChild(option);
+        }
+
+        function mapArrayResponse(res) {
+            if (Array.isArray(res?.data)) return res.data;
+            if (Array.isArray(res?.result)) return res.result;
+            if (Array.isArray(res)) return res;
+            return [];
+        }
+
+        function mapPageResponse(res) {
+            if (Array.isArray(res?.data?.content)) return res.data.content;
+            if (Array.isArray(res?.result?.content)) return res.result.content;
+            return [];
+        }
+
+        function normalizeNotificationItem(item) {
+            return {
+                id: item?.id || item?.notificationId || item?.appointmentId || `${item?.type || 'notification'}-${item?.createdAt || ''}`,
+                type: item?.type || item?.eventType || 'appointment',
+                title: item?.title || item?.eventType || 'Appointment update',
+                message: item?.message || '',
+                appointmentId: item?.appointmentId || '',
+                isRead: Boolean(item?.isRead),
+                createdAt: item?.createdAt || item?.appointmentDateTime || ''
+            };
+        }
+
+        async function fetchJson(path, options) {
+            const resp = await fetch(path, options);
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.message || 'Request failed.');
+            return data?.data ?? data?.result ?? data;
+        }
+
+        // simple debounce helper
+        function debounce(fn, wait = 300) {
+            let t = null;
+            return function(...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), wait);
+            };
+        }
+
+        async function refreshNotifications() {
+            try {
+                const [list, unreadCount] = await Promise.all([
+                    fetchJson('/notifications/my', { headers: authHeaders() }),
+                    fetchJson('/notifications/my/unread-count', { headers: authHeaders() })
+                ]);
+                notificationItems = Array.isArray(list) ? list.map(normalizeNotificationItem) : [];
+                notifUnreadBadge.textContent = `${unreadCount || 0} unread`;
+                renderNotifications();
+            } catch (err) {
+                notifList.innerHTML = '<div style="color:#9a4a4a;">Failed to load notifications.</div>';
+                setStatus(err.message, 'error');
+            }
+        }
+
+        function formatNotificationTime(value) {
+            if (!value) return '';
+            const dt = new Date(value);
+            return Number.isNaN(dt.getTime()) ? String(value) : dt.toLocaleString();
+        }
+
+        function notificationLabel(item) {
+            if (item.isRead) return 'Read';
+            return 'Unread';
+        }
+
+        function renderNotifications() {
+            const items = notificationItems.filter((item) => notificationFilter === 'all' ? true : !item.isRead);
+            if (!items.length) {
+                notifList.innerHTML = `<div style="padding:8px; color:#6f8093;">No ${notificationFilter === 'unread' ? 'unread ' : ''}notifications.</div>`;
+                return;
+            }
+
+            notifList.innerHTML = items.map((item) => {
+                const actionBtn = item.isRead
+                    ? `<button class="btn secondary" data-notif-action="unread" data-notif-id="${item.id}" type="button">Mark unread</button>`
+                    : `<button class="btn ghost" data-notif-action="read" data-notif-id="${item.id}" type="button">Mark read</button>`;
+                return `
+                    <div style="padding:10px; border:1px solid #edf3f9; border-radius:10px; margin-bottom:8px; background:${item.isRead ? '#fff' : '#f0f7ff'};">
+                        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+                            <div>
+                                <div style="font-weight:800;">${item.title}</div>
+                                <div style="font-size:12px; color:#597085; margin-top:3px;">${item.message || '-'}</div>
+                                <div style="font-size:11px; color:#7a8ea2; margin-top:4px;">${formatNotificationTime(item.createdAt)}${item.appointmentId ? ` • Appointment ${item.appointmentId}` : ''}</div>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                <span style="display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:800; background:${item.isRead ? '#e8f8ee' : '#ffe6b7'}; color:${item.isRead ? '#0e7a46' : '#8a5600'};">${notificationLabel(item)}</span>
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function markNotificationRead(notificationId) {
+            await fetchJson(`/notifications/${notificationId}/read`, { method: 'PATCH', headers: authHeaders() });
+            await refreshNotifications();
+        }
+
+        async function markNotificationUnread(notificationId) {
+            await fetchJson(`/notifications/${notificationId}/unread`, { method: 'PATCH', headers: authHeaders() });
+            await refreshNotifications();
+        }
+
+        async function markAllNotificationsRead() {
+            await fetchJson('/notifications/my/read-all', { method: 'PATCH', headers: authHeaders() });
+            await refreshNotifications();
+        }
+
+        function ensureNotificationPolling() {
+            if (notificationPollId) return;
+            notificationPollId = setInterval(() => {
+                if (tokenEl.value.trim()) {
+                    refreshNotifications();
+                }
+            }, 15000);
+        }
+
+        function stopNotificationPolling() {
+            if (notificationPollId) {
+                clearInterval(notificationPollId);
+                notificationPollId = null;
+            }
+        }
+
+        async function loadDoctorsByBlock() {
+            try {
+                if (!dateEl.value) throw new Error("Select appointment date from calendar.");
+                if (!selectedBlock) throw new Error("Select a time block.");
+
+                setStatus("Loading available doctors for selected block...", "");
+                const qs = new URLSearchParams({
+                    date: dateEl.value,
+                    time: toTimeWithSeconds(selectedBlock)
+                });
+
+                const resp = await fetch("/appointment/available-doctors?" + qs.toString(), {
+                    method: "GET",
+                    headers: authHeaders()
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Failed to load doctors.");
+
+                latestAvailability = mapArrayResponse(data);
+                clearDoctorOptions(latestAvailability.length ? "Choose doctor" : "No doctor available in this block");
+                latestAvailability.forEach((d) => {
+                    const op = document.createElement("option");
+                    op.value = d.id;
+                    op.textContent = (d.fullName || "Unknown") + " • " + (d.specialization || "N/A");
+                    doctorSelectEl.appendChild(op);
+                });
+
+                // Auto-select first available doctor to avoid manual load step
+                if (latestAvailability.length) {
+                    doctorSelectEl.value = latestAvailability[0].id;
+                    setStatus("Auto-selected doctor: " + (latestAvailability[0].fullName || latestAvailability[0].id), "");
+                }
+
+                setStatus("Available doctors loaded for " + dateEl.value + " " + selectedBlock, "ok");
+                refreshNotifications();
+            } catch (err) {
+                clearDoctorOptions("Cannot load doctors");
+                setStatus(err.message, "error");
+            }
+        }
+
+        async function createAppointment() {
+            try {
+                const doctorId = doctorSelectEl.value;
+                if (!doctorId) throw new Error("Choose a doctor.");
+                if (!dateEl.value) throw new Error("Choose appointment date.");
+                if (!selectedBlock) throw new Error("Choose time block.");
+
+                const payload = {
+                    doctorId,
+                    appointmentDate: dateEl.value,
+                    appointmentTime: toTimeWithSeconds(selectedBlock),
+                    notes: notesEl.value.trim()
+                };
+
+                setStatus("Creating appointment...", "");
+                const resp = await fetch("/appointment/createAppointment", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Create appointment failed.");
+
+                setStatus("Appointment created successfully.", "ok");
+                await loadAppointments();
+                await refreshNotifications();
+            } catch (err) {
+                setStatus(err.message, "error");
+            }
+        }
+
+        function statusPill(status) {
+            return '<span class="pill ' + status + '">' + status + '</span>';
+        }
+
+        async function loadAppointments() {
+            try {
+                const qs = new URLSearchParams({
+                    search: "",
+                    page: "0",
+                    size: "50",
+                    sortBy: "appointmentDateTime",
+                    direction: "desc"
+                });
+                const resp = await fetch("/appointment/patient/getAppointments?" + qs.toString(), {
+                    method: "GET",
+                    headers: authHeaders()
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Failed to load appointments.");
+
+                const appointments = mapPageResponse(data);
+                if (!appointments.length) {
+                    appointmentsBody.innerHTML = '<tr><td colspan="7">No appointments found.</td></tr>';
+                    return;
+                }
+
+                appointmentsBody.innerHTML = appointments.map((a) => {
+                    const actions = [];
+                    if (a.status === "PENDING" || a.status === "SCHEDULED") {
+                        actions.push('<button class="btn danger" data-action="cancel" data-id="' + a.appointmentId + '">Cancel</button>');
+                        actions.push('<button class="btn secondary" data-action="reschedule" data-id="' + a.appointmentId + '" data-doctor="' + (a.doctorName || "") + '">Reschedule</button>');
+                    }
+                    return '<tr>' +
+                        '<td>' + a.appointmentId + '</td>' +
+                        '<td>' + (a.doctorName || "-") + '</td>' +
+                        '<td>' + (a.appointmentDate || "-") + '</td>' +
+                        '<td>' + (String(a.appointmentTime || "-").slice(0, 5)) + '</td>' +
+                        '<td>' + statusPill(a.status) + '</td>' +
+                        '<td>' + (a.notes || a.cancelReason || "-") + '</td>' +
+                        '<td>' + (actions.join(" ") || "-") + '</td>' +
+                    '</tr>';
+                }).join("");
+            } catch (err) {
+                appointmentsBody.innerHTML = '<tr><td colspan="7">Failed to load appointments.</td></tr>';
+                setStatus(err.message, "error");
+            }
+        }
+
+        async function cancelAppointment(appointmentId) {
+            const reason = prompt("Cancellation reason:", "Need another time");
+            if (reason === null) return;
+
+            try {
+                const payload = { appointmentId, cancelReason: reason.trim() || "No reason" };
+                const resp = await fetch("/appointment/cancelAppointment", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Cancel failed.");
+                setStatus("Appointment cancelled.", "ok");
+                await loadAppointments();
+                await refreshNotifications();
+            } catch (err) {
+                setStatus(err.message, "error");
+            }
+        }
+
+        async function refreshAvailableForReschedule() {
+            if (!rescheduleDateEl.value || !selectedRescheduleBlock) {
+                renderBlocks(rescheduleBlocksEl, selectedRescheduleBlock, null, "Unavailable");
+                return;
+            }
+            try {
+                const qs = new URLSearchParams({
+                    date: rescheduleDateEl.value,
+                    time: toTimeWithSeconds(selectedRescheduleBlock)
+                });
+                const resp = await fetch("/appointment/available-doctors?" + qs.toString(), {
+                    method: "GET",
+                    headers: authHeaders()
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Cannot verify slot.");
+                const docs = mapArrayResponse(data);
+                const ok = docs.some((d) => (d.fullName || "") === rescheduleTarget.doctorName);
+                const availableSet = new Set();
+                if (ok) availableSet.add(selectedRescheduleBlock);
+                renderBlocks(rescheduleBlocksEl, selectedRescheduleBlock, availableSet, "Selected block not available for this doctor");
+            } catch {
+                renderBlocks(rescheduleBlocksEl, selectedRescheduleBlock, null, "Cannot verify now");
+            }
+        }
+
+        function openRescheduleModal(appointmentId, doctorName) {
+            rescheduleTarget = { appointmentId, doctorName };
+            selectedRescheduleBlock = "";
+            rescheduleDateEl.value = dateEl.value || today;
+            rescheduleReasonEl.value = "";
+            renderBlocks(rescheduleBlocksEl, selectedRescheduleBlock, null, "");
+            rescheduleBackdrop.style.display = "flex";
+        }
+
+        function closeRescheduleModal() {
+            rescheduleBackdrop.style.display = "none";
+        }
+
+        async function confirmReschedule() {
+            try {
+                if (!rescheduleTarget.appointmentId) throw new Error("No target appointment.");
+                if (!rescheduleDateEl.value) throw new Error("Pick new date.");
+                if (!selectedRescheduleBlock) throw new Error("Pick new time block.");
+
+                const payload = {
+                    appointmentId: rescheduleTarget.appointmentId,
+                    newAppointmentDate: rescheduleDateEl.value,
+                    newAppointmentTime: toTimeWithSeconds(selectedRescheduleBlock),
+                    reason: rescheduleReasonEl.value.trim() || "Patient requested new slot"
+                };
+
+                const resp = await fetch("/appointment/rescheduleAppointment", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data?.message || "Reschedule failed.");
+
+                closeRescheduleModal();
+                setStatus("Appointment rescheduled.", "ok");
+                await loadAppointments();
+                await refreshNotifications();
+            } catch (err) {
+                setStatus(err.message, "error");
+            }
+        }
+
+        blocksEl.addEventListener("click", async () => {
+            if (dateEl.value && selectedBlock) {
+                try {
+                    await loadDoctorsByBlock();
+                } catch (e) {
+                    // ignore load errors here
+                }
+            }
+        });
+
+        rescheduleDateEl.addEventListener("change", refreshAvailableForReschedule);
+        loadAvailabilityBtn.addEventListener("click", loadDoctorsByBlock);
+        bookBtn.addEventListener("click", createAppointment);
+        refreshAppointmentsBtn.addEventListener("click", loadAppointments);
+        refreshNotificationsBtn.addEventListener("click", refreshNotifications);
+        markAllReadBtn.addEventListener("click", markAllNotificationsRead);
+        showAllNotificationsBtn.addEventListener("click", () => { notificationFilter = 'all'; renderNotifications(); });
+        showUnreadNotificationsBtn.addEventListener("click", () => { notificationFilter = 'unread'; renderNotifications(); });
+        closeRescheduleBtn.addEventListener("click", closeRescheduleModal);
+        confirmRescheduleBtn.addEventListener("click", confirmReschedule);
+
+        appointmentsBody.addEventListener("click", (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            const action = btn.getAttribute("data-action");
+            const id = btn.getAttribute("data-id");
+            const doctor = btn.getAttribute("data-doctor") || "";
+            if (action === "cancel") cancelAppointment(id);
+            if (action === "reschedule") openRescheduleModal(id, doctor);
+        });
+
+        notifList.addEventListener("click", async (e) => {
+            const btn = e.target.closest('button[data-notif-action]');
+            if (!btn) return;
+            const notificationId = btn.getAttribute('data-notif-id');
+            const action = btn.getAttribute('data-notif-action');
+            try {
+                if (action === 'read') await markNotificationRead(notificationId);
+                if (action === 'unread') await markNotificationUnread(notificationId);
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        });
+
+        renderBlocks(blocksEl, "", null, "");
+        renderBlocks(rescheduleBlocksEl, "", null, "");
+
+        // --- Realtime notifications (STOMP over SockJS) ---
+        const connectWsBtn = document.getElementById('connectWsBtn');
+        const disconnectWsBtn = document.getElementById('disconnectWsBtn');
+        let stompClient = null;
+        let stompSub = null;
+
+        function addNotificationItem(payload) {
+            try {
+                const p = typeof payload === 'string' ? JSON.parse(payload) : payload;
+                const el = document.createElement('div');
+                el.style.padding = '8px';
+                el.style.borderBottom = '1px solid #eef6fb';
+                el.innerHTML = '<strong>' + (p.eventType || 'event') + '</strong> — ' + (p.message || '') + '<br/><small>Appointment: ' + (p.appointmentId || '-') + ' • ' + (p.appointmentDateTime || '') + '</small>';
+                if (notifList.textContent.trim() === 'No notifications yet.') notifList.innerHTML = '';
+                notifList.insertBefore(el, notifList.firstChild);
+            } catch (e) {
+                console.warn('Invalid notification payload', e);
+            }
+        }
+
+        async function connectNotifications() {
+            try {
+                const token = normalizeToken(tokenEl.value);
+                if (!token) throw new Error('PATIENT token is required for notifications.');
+                // load libs
+                if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
+                    await loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js');
+                    await loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js');
+                }
+                const socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.debug = null;
+                stompClient.connect({ Authorization: 'Bearer ' + token }, function(frame) {
+                    setStatus('Connected to notifications', 'ok');
+                    connectWsBtn.style.display = 'none';
+                    disconnectWsBtn.style.display = '';
+                    // subscribe to appointment notifications for this user
+                    stompSub = stompClient.subscribe('/user/queue/appointments', function(message) {
+                        addNotificationItem(message.body);
+                        refreshNotifications();
+                    });
+                    refreshNotifications();
+                    ensureNotificationPolling();
+                }, function(error) {
+                    setStatus('Notifications connection failed: ' + (error && error.headers ? error.headers.message : (error || '')), 'error');
+                });
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        function disconnectNotifications() {
+            try {
+                if (stompSub) stompSub.unsubscribe();
+                if (stompClient) stompClient.disconnect(() => {
+                    setStatus('Disconnected from notifications', '');
+                    connectWsBtn.style.display = '';
+                    disconnectWsBtn.style.display = 'none';
+                    stopNotificationPolling();
+                });
+            } catch (e) {
+                connectWsBtn.style.display = '';
+                disconnectWsBtn.style.display = 'none';
+                stopNotificationPolling();
+            }
+        }
+
+        function loadScript(src) {
+            return new Promise((res, rej) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = res;
+                s.onerror = rej;
+                document.head.appendChild(s);
+            });
+        }
+
+        connectWsBtn.addEventListener('click', connectNotifications);
+        disconnectWsBtn.addEventListener('click', disconnectNotifications);
+
+        // Auto-behaviors: when patient token is provided, auto-load appointments, notifications and try to connect WS
+        tokenEl.addEventListener('input', debounce(() => {
+            if (!tokenEl.value.trim()) return;
+            try {
+                loadAppointments().catch(()=>{});
+                refreshNotifications().catch(()=>{});
+                if (!stompClient) connectNotifications().catch(()=>{});
+            } catch (e) {}
+        }, 600));
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-package com.example.SmartHospital.service;
+package com.example.SmartHospital.service.user;
 
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetails;

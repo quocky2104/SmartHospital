@@ -5,6 +5,9 @@ import java.util.List;
 
 import com.example.SmartHospital.helper.CustomIdGenerator;
 
+import org.hibernate.annotations.ColumnDefault;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -32,8 +35,16 @@ public class MedicalRecord {
     private String treatmentNotes;
     private LocalDateTime createdAt;
 
-    @ManyToOne(optional=false)
-    @JoinColumn(name="doctor_id")
+    private LocalDateTime updatedAt;
+
+    private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean isDeleted = false;
+
+    @ManyToOne(optional=true)
+    @JoinColumn(name="doctor_id", nullable = true)
     private Doctor doctor;
 
     @ManyToOne(optional=false)

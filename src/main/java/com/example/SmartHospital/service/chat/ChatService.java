@@ -1,4 +1,4 @@
-package com.example.SmartHospital.service;
+package com.example.SmartHospital.service.chat;
 
 import java.util.Comparator;
 import java.util.List;
@@ -15,7 +15,7 @@ import com.example.SmartHospital.enums.MessageStatus;
 import com.example.SmartHospital.model.Doctor;
 import com.example.SmartHospital.model.DoctorPatientMessages;
 import com.example.SmartHospital.model.Patient;
-import com.example.SmartHospital.repository.ChatRepository;
+import com.example.SmartHospital.repository.DoctorPatientChatRepository;
 import com.example.SmartHospital.repository.DoctorRepository;
 import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.repository.UserRepository;
@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ChatService {
-    private final ChatRepository chatRepository;
+    private final DoctorPatientChatRepository chatRepository;
     private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
     private final PatientRepository patientRepository;

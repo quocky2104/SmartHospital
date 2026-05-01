@@ -17,16 +17,17 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         HttpServletResponse response,
         AccessDeniedException accessDeniedException
     ) throws IOException {
-        
+        String message = "Forbidden: You do not have permission to access " + request.getRequestURI();
+
         response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.getWriter().write("""
-            {
-                "status": 403,
-                "message": "Unauthorized: You do not have permission to perform this action",
-                "data": null
-            }
-        """);
+        response.getWriter().write(String.format(
+                "{\"status\":403,\"message\":\"%s\",\"data\":null}",
+                escapeJson(message)));
         
+    }
+
+    private String escapeJson(String text) {
+        return text.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

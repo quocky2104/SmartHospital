@@ -11,7 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Component;
 
 import com.example.SmartHospital.config.jwt.JwtProvider;
-import com.example.SmartHospital.service.OnlineStatusService;
+import com.example.SmartHospital.service.chat.OnlineStatusService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

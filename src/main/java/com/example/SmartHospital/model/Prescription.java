@@ -33,10 +33,19 @@ public class Prescription {
     @Column(nullable=false)
     private LocalDateTime issueDate;
     private String notes;
+    private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
 
     @ManyToOne(optional=false)
     @JoinColumn(name="patient_id")
     private User patient;
+
+    @ManyToOne
+    @JoinColumn(name="doctor_id")
+    private Doctor doctor;
 
     @ManyToMany
     @JoinTable(

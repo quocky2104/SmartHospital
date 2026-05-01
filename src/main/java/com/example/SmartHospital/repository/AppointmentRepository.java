@@ -1,7 +1,5 @@
 package com.example.SmartHospital.repository;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -48,15 +46,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
 
     // Find busy doctor IDs
     @Query("""
-        SELECT a.doctor.id
+                SELECT DISTINCT a.doctor.id
         FROM Appointment a
-        WHERE a.appointmentDateTime BETWEEN :start AND :end
-        AND a.status = :status
+                WHERE a.appointmentDateTime < :end
+                    AND a.appointmentDateTime >= :start
+          AND a.status IN :statuses
     """)
-    List<String> findBusyDoctorIds(
+        List<String> findBusyDoctorIdsByStatuses(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
-            @Param("status") AppointmentStatus status
+            @Param("statuses") List<AppointmentStatus> statuses
     );
 
     // Find available doctors
@@ -67,18 +66,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     """)
     List<Doctor> findAvailableDoctors(@Param("busyIds") List<String> busyIds);
 
-    // Find booked times
-    @Query("""
-        SELECT a.appointmentDateTime
-        FROM Appointment a
-        WHERE a.doctor.id = :doctorId
-            AND a.appointmentDateTime BETWEEN :start AND :end
-            AND a.status = :status
-        """)
-    List<LocalTime> findBookedDateTimes(
-        @Param("doctorId") String doctorId,
-        @Param("start") LocalDateTime start,
-        @Param("end") LocalDateTime end,
-        @Param("status") AppointmentStatus status
-    );
+    long countByAppointmentDateTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByAppointmentDateTimeBetweenAndStatus(LocalDateTime start, LocalDateTime end, AppointmentStatus status);
 }

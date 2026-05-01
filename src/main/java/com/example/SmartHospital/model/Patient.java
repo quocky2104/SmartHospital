@@ -2,6 +2,7 @@ package com.example.SmartHospital.model;
 
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -15,7 +16,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class Patient extends User{
-    @OneToMany(mappedBy="patient")
+    @OneToMany(mappedBy="patient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MedicalRecord> medicalRecords;
 
     @Column(unique=true)

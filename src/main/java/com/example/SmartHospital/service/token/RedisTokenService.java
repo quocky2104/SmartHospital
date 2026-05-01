@@ -1,4 +1,4 @@
-package com.example.SmartHospital.service;
+package com.example.SmartHospital.service.token;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import com.example.SmartHospital.service.OnlineStatusService;
+import com.example.SmartHospital.service.chat.OnlineStatusService;
 
 import lombok.RequiredArgsConstructor;
 @Component

@@ -1,20 +1,25 @@
 package com.example.SmartHospital.controller;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.SmartHospital.config.CustomUserDetails;
 import com.example.SmartHospital.config.jwt.JwtProvider;
@@ -28,13 +33,14 @@ import com.example.SmartHospital.dtos.AuthDtos.Response.ResetTokenResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.TokenResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.VerifyTokenResponse;
 import com.example.SmartHospital.model.User;
-import com.example.SmartHospital.service.CustomUserDetailsService;
-import com.example.SmartHospital.service.ForgotPasswordService;
-import com.example.SmartHospital.service.RedisTokenService;
-import com.example.SmartHospital.service.UserService;
+import com.example.SmartHospital.service.auth.ForgotPasswordService;
+import com.example.SmartHospital.service.token.RedisTokenService;
+import com.example.SmartHospital.service.user.CustomUserDetailsService;
+import com.example.SmartHospital.service.user.UserService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,8 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
-    @Value("${jwt.access.expiration}")
-    private long accessTokenExpiration;
     @Value("${jwt.refresh.expiration}")
     private long refreshTokenExpiration;
 
@@ -59,6 +63,10 @@ public class AuthController {
     private final CustomUserDetailsService customUserDetailsService;
     private final AuthenticationManager authenticationManager;
 
+    @Operation(
+        summary = "User login",
+        description = "Authenticate user with email and password. Returns access token and sets refresh token in HTTP-only secure cookie"
+    )
     @PostMapping("/login")
     public  ResponseEntity<ApiResponse<TokenResponse>> login(
         @RequestBody LoginRequest loginRequest,
@@ -115,13 +123,19 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/register")
+    @Operation(
+        summary = "User registration for patients",
+        description = "Register a new patient account with optional avatar and medical record files uploaded to MinIO storage"
+    )
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public  ResponseEntity<ApiResponse<TokenResponse>> register(
-        @RequestBody RegisterRequest registerRequest,
+        @Valid @ModelAttribute RegisterRequest registerRequest,
+        @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile,
+        @RequestPart(value = "medicalRecordFiles", required = false) List<MultipartFile> medicalRecordFiles,
         HttpServletResponse response
     ) {
         try {
-            User user = userService.registerUser(registerRequest);
+            User user = userService.registerUser(registerRequest, avatarFile, medicalRecordFiles);
             if(user == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(400, "Registration failed", null));
@@ -168,6 +182,10 @@ public class AuthController {
         }
     }
 
+    @Operation(
+        summary = "User logout",
+        description = "Logout user by blacklisting access token, invalidating refresh token, and clearing HTTP-only cookie"
+    )
     @PostMapping("/logout")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Void>> logout(
@@ -175,7 +193,7 @@ public class AuthController {
         HttpServletResponse response) {
         try {
             String authorizationHeader = request.getHeader("Authorization"); // Bearer token
-            // blacklist access token
+            // blacklist access token until it expires (JWT is stateless so we can't delete it, we can only mark it as invalid in Redis)
             String token = authorizationHeader.replace("Bearer ", ""); // Remove "Bearer " to get token
             Claims claims = jwtProvider.getClaims(token);
             long expirationMillis = claims.getExpiration().getTime() - System.currentTimeMillis();
@@ -184,7 +202,7 @@ public class AuthController {
             String email = claims.get("email", String.class);
             String jti = claims.getId();
             redisTokenService.deleteRefreshToken(email, jti);
-            // delete httpOnly cookie
+            // delete httpOnly cookie so that browser will stop sending it (logout)
             response.setHeader("Set-Cookie", "refreshToken=deleted; HttpOnly; Secure; SameSite=Strict; Max-Age=0");
             return ResponseEntity.status(HttpStatus.OK)
             .body(new ApiResponse<>(200, "Logout successful", null));
@@ -203,11 +221,16 @@ public class AuthController {
     // This endpoint is called to refresh access and refresh tokens 
     // This is neccessary because access tokens are short-lived
     // and refresh tokens need to be rotated for security
+    @Operation(
+        summary = "Refresh access and refresh tokens",
+        description = "Generate new access token and rotate refresh token from HTTP-only cookie. Requires valid stored refresh token"
+    )
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(
         HttpServletRequest request,
         HttpServletResponse response) {
         String refreshToken = getRefreshTokenFromCookie(request);
+        // If no refresh token cookie is found, return 401 Unauthorized to indicate that the user needs to log in again
         if (refreshToken == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(new ApiResponse<>(401, "Refresh token not found", null));
@@ -215,6 +238,7 @@ public class AuthController {
         try {
             Claims refreshClaims = jwtProvider.getClaims(refreshToken);
             String email = refreshClaims.get("email", String.class);
+            // Validate refresh token against stored token in Redis
             String jti = refreshClaims.getId();
             if (!redisTokenService.isValidRefreshToken(email, jti, refreshToken)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -267,6 +291,10 @@ public class AuthController {
         }
         return null;
     }
+    @Operation(
+        summary = "Send password reset OTP",
+        description = "Send one-time password to user's email for password reset. OTP expires in 5 minutes and is queued via RabbitMQ for reliability"
+    )
     @PostMapping("/send-otp")
     public ResponseEntity<ApiResponse<VerifyTokenResponse>> forgetPassword(@RequestBody @Valid SendOtpRequest request) {
         String email = request.getEmail();
@@ -281,6 +309,10 @@ public class AuthController {
         }
     }
 
+    @Operation(
+        summary = "Verify password reset OTP",
+        description = "Validate the OTP sent to user's email. Returns a temporary reset token valid for 15 minutes"
+    )
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<ResetTokenResponse>> verifyOtp(@RequestBody OtpVerificationRequest request) {
         String token = request.getToken();
@@ -296,6 +328,10 @@ public class AuthController {
         }
     }
 
+    @Operation(
+        summary = "Reset password",
+        description = "Set a new password using the temporary reset token obtained after OTP verification. Token is valid for 15 minutes"
+    )
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequest request) {
         String token = request.getToken();
