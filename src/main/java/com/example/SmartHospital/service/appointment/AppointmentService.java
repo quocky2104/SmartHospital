@@ -146,10 +146,11 @@ public class AppointmentService {
         return new AppointmentResponse(saved);
     }
 
-    public List<DoctorDTO> findAvailableDoctors(
+        public List<DoctorDTO> findAvailableDoctors(
             LocalDate date,
-            LocalTime time
-    ) {
+            LocalTime time,
+            String departmentId
+        ) {
         validateTimeslotInput(date, time);
 
         LocalDateTime start = LocalDateTime.of(date, time);
@@ -163,9 +164,16 @@ public class AppointmentService {
             );
 
         List<Doctor> availableDoctors =
-                appointmentRepository.findAvailableDoctors(
-                        busyDoctorIds.isEmpty() ? null : busyDoctorIds
-                );
+            appointmentRepository.findAvailableDoctors(
+                busyDoctorIds.isEmpty() ? null : busyDoctorIds
+            );
+
+        // If departmentId provided, filter doctors to that department
+        availableDoctors = availableDoctors.stream()
+            .filter(d -> d.getDepartment() != null)
+            .filter(d -> !Boolean.TRUE.equals(d.getDepartment().getIsDeleted()))
+            .filter(d -> departmentId == null || departmentId.isBlank() || departmentId.equals(d.getDepartment().getId()))
+            .toList();
 
         return availableDoctors.stream()
                                 .filter(d -> isWithinWorkingHours(d.getWorkingHours(), start, end)) // Filter by working hours
@@ -177,6 +185,7 @@ public class AppointmentService {
                                     dto.setSpecialization(d.getSpecialization());
                                     dto.setWorkingHours(d.getWorkingHours());
                                     dto.setAvailabilityStatus(d.getAvailabilityStatus());
+                                    dto.setDepartmentId(d.getDepartment() == null ? null : d.getDepartment().getId());
                                     return dto;
                                 })
                                 .toList();

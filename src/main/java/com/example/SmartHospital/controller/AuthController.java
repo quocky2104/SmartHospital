@@ -7,13 +7,11 @@ import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -127,9 +125,9 @@ public class AuthController {
         summary = "User registration for patients",
         description = "Register a new patient account with optional avatar and medical record files uploaded to MinIO storage"
     )
-    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/register")
     public  ResponseEntity<ApiResponse<TokenResponse>> register(
-        @Valid @ModelAttribute RegisterRequest registerRequest,
+        @Valid RegisterRequest registerRequest,
         @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile,
         @RequestPart(value = "medicalRecordFiles", required = false) List<MultipartFile> medicalRecordFiles,
         HttpServletResponse response

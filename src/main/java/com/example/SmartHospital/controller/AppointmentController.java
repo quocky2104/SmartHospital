@@ -4,11 +4,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -189,8 +189,9 @@ public class AppointmentController {
         @RequestParam LocalDate date,
         @Schema(description = "Time slot in 24h format", example = "10:00:00", format = "time")
         @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
-        @RequestParam LocalTime time ) {
-            List<DoctorDTO> doctors = appointmentService.findAvailableDoctors(date, time); 
+        @RequestParam LocalTime time,
+        @RequestParam(required = false) String departmentId ) {
+            List<DoctorDTO> doctors = appointmentService.findAvailableDoctors(date, time, departmentId); 
             return ResponseEntity.ok(new ApiResponse<>(200, "Available doctors retrieved", doctors)); 
     }
 }

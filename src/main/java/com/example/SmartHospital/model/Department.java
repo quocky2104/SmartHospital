@@ -1,4 +1,6 @@
 package com.example.SmartHospital.model;
+import org.hibernate.annotations.ColumnDefault;
+
 import com.example.SmartHospital.helper.CustomIdGenerator;
 
 import jakarta.persistence.Column;
@@ -24,4 +26,8 @@ public class Department {
 
     @Column(unique = true)
     private String name;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean isDeleted = false;
 }

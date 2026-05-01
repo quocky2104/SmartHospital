@@ -202,8 +202,7 @@
 						<input id="search" type="text" placeholder="Optional search" />
 						<div class="btn-row">
 							<button id="loadBtn" class="btn primary" type="button" style="display:none">Load appointments</button>
-							<button id="connectWsBtn" class="btn ghost" type="button">Connect notifications</button>
-							<button id="disconnectWsBtn" class="btn ghost" type="button" style="display:none">Disconnect notifications</button>
+							<button id="simulateNotifBtn" class="btn ghost" type="button">Simulate notification</button>
 						</div>
 					</div>
 				</div>
@@ -639,14 +638,15 @@
 		renderRescheduleBlocks();
 
 		// --- Realtime notifications (STOMP over SockJS) ---
-		const connectWsBtn = document.getElementById('connectWsBtn');
-		const disconnectWsBtn = document.getElementById('disconnectWsBtn');
+		const simulateNotifBtn = document.getElementById('simulateNotifBtn');
 		let stompClient = null;
 		let stompSub = null;
 
 		function addNotificationItem(payload) {
 			try {
 				const p = typeof payload === 'string' ? JSON.parse(payload) : payload;
+				// show a transient side popup for new notifications
+				try { showSidePopup(normalizeNotificationItem(p)); } catch(e) {}
 				const el = document.createElement('div');
 				el.style.padding = '8px';
 				el.style.borderBottom = '1px solid #eef6fb';
@@ -656,6 +656,63 @@
 			} catch (e) {
 				console.warn('Invalid notification payload', e);
 			}
+		}
+
+		function ensureToastContainer() {
+			let c = document.getElementById('notifToastContainer');
+			if (!c) {
+				c = document.createElement('div');
+				c.id = 'notifToastContainer';
+				c.style.position = 'fixed';
+				c.style.right = '16px';
+				c.style.top = '16px';
+				c.style.width = '320px';
+				c.style.zIndex = '9999';
+				document.body.appendChild(c);
+			}
+			return c;
+		}
+
+		function showSidePopup(item) {
+			try {
+				const container = ensureToastContainer();
+				const toast = document.createElement('div');
+				toast.className = 'notif-toast';
+				toast.style.background = '#1f6feb';
+				toast.style.color = '#fff';
+				toast.style.padding = '12px';
+				toast.style.marginBottom = '8px';
+				toast.style.borderRadius = '8px';
+				toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
+				toast.style.opacity = '1';
+				toast.innerHTML = `<div style="font-weight:800">${item.title}</div><div style="font-size:13px; margin-top:4px;">${item.message || ''}</div>`;
+				container.insertBefore(toast, container.firstChild);
+				setTimeout(() => {
+					toast.style.transition = 'opacity 300ms ease, transform 300ms ease';
+					toast.style.opacity = '0';
+					toast.style.transform = 'translateX(20px)';
+					setTimeout(() => toast.remove(), 320);
+				}, 5000);
+			} catch (e) { console.warn(e); }
+		}
+
+		function simulateNotification() {
+			const now = new Date().toISOString();
+			const fakeItem = normalizeNotificationItem({
+				id: `fake-${Date.now()}`,
+				eventType: 'SIMULATED_EVENT',
+				title: 'Simulated notification',
+				message: 'This is a fake notification for UI testing.',
+				appointmentId: 'SIM-000',
+				isRead: false,
+				createdAt: now
+			});
+			notificationItems = [fakeItem, ...notificationItems];
+			const unread = notificationItems.filter((item) => !item.isRead).length;
+			notifUnreadBadge.textContent = `${unread} unread`;
+			renderNotifications();
+			setStatus('Added one simulated notification.', 'ok');
+			try { showSidePopup(fakeItem); } catch(e) {}
 		}
 
 		async function connectNotifications() {
@@ -671,12 +728,10 @@
 				stompClient.debug = null;
 				stompClient.connect({ Authorization: 'Bearer ' + token }, function(frame) {
 					setStatus('Connected to notifications', 'ok');
-					connectWsBtn.style.display = 'none';
-					disconnectWsBtn.style.display = '';
 					stompSub = stompClient.subscribe('/user/queue/appointments', function(message) {
 						refreshNotifications();
 						// also refresh appointments list when appointment-related notifications arrive
-						try { loadAppointments().catch(()=>{}); } catch(e) { }
+						loadAppointments().catch(()=>{});
 					});
 					refreshNotifications();
 					ensureNotificationPolling();
@@ -691,16 +746,15 @@
 		function disconnectNotifications() {
 			try {
 				if (stompSub) stompSub.unsubscribe();
+				stompSub = null;
 				if (stompClient) stompClient.disconnect(() => {
-					setStatus('Disconnected from notifications', '');
-					connectWsBtn.style.display = '';
-					disconnectWsBtn.style.display = 'none';
 					stopNotificationPolling();
 				});
-			} catch (e) {
-				connectWsBtn.style.display = '';
-				disconnectWsBtn.style.display = 'none';
+				stompClient = null;
+			} catch (_err) {
 				stopNotificationPolling();
+				stompClient = null;
+				stompSub = null;
 			}
 		}
 
@@ -714,17 +768,17 @@
 			});
 		}
 
-		connectWsBtn.addEventListener('click', connectNotifications);
-		disconnectWsBtn.addEventListener('click', disconnectNotifications);
+		simulateNotifBtn.addEventListener('click', simulateNotification);
 
 		// Auto-behaviors: when doctor token is provided, auto-load appointments, notifications and try to connect WS
 		tokenEl.addEventListener('input', debounce(() => {
-			if (!tokenEl.value.trim()) return;
-			try {
-				loadAppointments().catch(()=>{});
-				refreshNotifications().catch(()=>{});
-				if (!stompClient) connectNotifications().catch(()=>{});
-			} catch (e) {}
+			if (!tokenEl.value.trim()) {
+				disconnectNotifications();
+				return;
+			}
+			loadAppointments().catch(()=>{});
+			refreshNotifications().catch(()=>{});
+			if (!stompClient) connectNotifications().catch(()=>{});
 		}, 600));
 	</script>
 </body>

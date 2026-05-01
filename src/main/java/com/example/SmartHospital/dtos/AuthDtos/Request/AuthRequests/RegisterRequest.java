@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import com.example.SmartHospital.enums.GenderType;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
@@ -22,9 +23,9 @@ public class RegisterRequest {
     private String identityNumber;
     @NotBlank
     private String address;
-    @NotBlank
+    @NotNull
     private GenderType gender;
-    @NotBlank
+    @NotNull
     private LocalDate dateOfBirth;
 
     private String insuranceNumber; //optional
