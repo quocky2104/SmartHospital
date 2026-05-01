@@ -4,19 +4,19 @@ SERVER_PORT=8080
 
 # Database (PostgreSQL)
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=change_me
+POSTGRES_PASSWORD=your_postgres_password
 POSTGRES_DB=SmartHospital_DB
-POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
 
 # PgAdmin
-PGADMIN_EMAIL=admin@example.test
-PGADMIN_PASSWORD=change_me
+PGADMIN_EMAIL=admin@local.dev
+PGADMIN_PASSWORD=your_pgadmin_password
 PGADMIN_PORT=5050
 
 # RabbitMQ
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
+RABBITMQ_USER=your_rabbitmq_user
+RABBITMQ_PASSWORD=your_rabbitmq_password
 RABBITMQ_PORT=5672
 RABBITMQ_MANAGEMENT_PORT=15672
 
@@ -26,7 +26,7 @@ REDIS_PORT=6379
 
 # MinIO
 MINIO_USER=minio
-MINIO_PASSWORD=miniopassword
+MINIO_PASSWORD=your_minio_password
 MINIO_URL=http://localhost:9000
 MINIO_PORT=9000
 MINIO_MANAGEMENT_PORT=9001
@@ -34,11 +34,11 @@ MINIO_MANAGEMENT_PORT=9001
 # Mail
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USERNAME=you@example.test
-MAIL_PASSWORD=app_specific_password
+MAIL_USERNAME=your_email@example.com
+MAIL_PASSWORD=your_app_specific_password
 
 # Frontend
 FRONTEND_URL=http://localhost:5173
 
 # JWT
-JWT_SECRET=change_this_secret
+JWT_SECRET=your_long_random_base64_or_hex_secret

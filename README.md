@@ -35,35 +35,48 @@ cd SmartHospital/backend
 Create a `.env` file in the `backend` root directory with the following configuration:
 
 ```env
-# Database Configuration
-# PostgreSQL Container Configuration
-POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
+SERVER_PORT=8080
+
+# Mail
+MAIL_USERNAME=your_email@example.com
+MAIL_PASSWORD=your_app_specific_password
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+
+# Frontend
+FRONTEND_URL=http://localhost:5173
+
+# RabbitMQ
+RABBITMQ_USER=your_rabbitmq_user
+RABBITMQ_PASSWORD=your_rabbitmq_password
+RABBITMQ_PORT=5672
+RABBITMQ_MANAGEMENT_PORT=15672
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# MinIO
+MINIO_USER=minio
+MINIO_PASSWORD=your_minio_password
+MINIO_PORT=9000
+MINIO_MANAGEMENT_PORT=9001
+MINIO_URL=http://localhost:9000
+
+# JWT
+JWT_SECRET=your_long_random_base64_or_hex_secret
+
+# PostgreSQL
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_postgres_password
 POSTGRES_DB=SmartHospital_DB
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
 
-# PgAdmin Configuration
+# PgAdmin
 PGADMIN_EMAIL=admin@local.dev
 PGADMIN_PASSWORD=your_pgadmin_password
-
-# Email Configuration (Gmail)
-MAIL_USERNAME=your_gmail@gmail.com
-MAIL_PASSWORD=your_app_specific_password
-
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
-
-# RabbitMQ Configuration
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
-
-# MinIO Configuration (File Storage)
-MINIO_USER=minioadmin
-MINIO_PASSWORD=minioadmin
-
-# JWT Secret
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+PGADMIN_PORT=5050
 ```
 
 > **Note:** For Gmail's `MAIL_PASSWORD`, use an [App-Specific Password](https://myaccount.google.com/apppasswords) instead of your regular Gmail password.
