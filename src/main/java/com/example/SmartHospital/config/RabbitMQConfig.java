@@ -77,18 +77,21 @@ public class RabbitMQConfig {
             .with(OTP_ROUTING_KEY);
     }
 
+    // Configure RabbitTemplate and MessageConverter for JSON serialization of messages
     @Bean
     public MessageConverter rabbitMessageConverter() {
         return new JacksonJsonMessageConverter();
     }
 
+    // RabbitTemplate is used to send messages to RabbitMQ, and it needs to be configured with the connection factory and message converter
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter rabbitMessageConverter) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(rabbitMessageConverter);
         return rabbitTemplate;
     }
-
+    
+    // Configure the RabbitListenerContainerFactory to use the same message converter for listeners that consume messages from RabbitMQ
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
