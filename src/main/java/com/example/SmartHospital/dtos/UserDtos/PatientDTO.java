@@ -1,12 +1,14 @@
 package com.example.SmartHospital.dtos.UserDtos;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import com.example.SmartHospital.enums.GenderType;
 import com.example.SmartHospital.enums.UserStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor // Default constructor
@@ -21,6 +23,7 @@ public class PatientDTO {
     private LocalDate dateOfBirth;
     private String address;
     private String avatarPath;
+    private List<String> additionalFiles;
     private UserStatus status;
     private String insuranceNumber;
     private String insuranceProvider;

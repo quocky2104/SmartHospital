@@ -1,7 +1,7 @@
 package com.example.SmartHospital.service.patient;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +15,7 @@ import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
 import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.PatientRepository;
+import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PatientManagementService {
     private final PatientRepository patientRepository;
+    private final MinioStorageService minioStorageService;
 
     // Paginated retrieval of patients with optional search
     public PaginatedResponse<PatientDTO> getPatients(int pageNumber, int pageSize, String search) {
@@ -46,7 +48,7 @@ public class PatientManagementService {
         List<PatientDTO> content = patientPage.getContent().stream()
             .filter(patient -> patient.getStatus() != UserStatus.DELETED)
             .map(this::convertToPatientDTO)
-            .collect(Collectors.toList());
+            .toList();
 
         return new PaginatedResponse<>(
             content,
@@ -66,7 +68,13 @@ public class PatientManagementService {
         return convertToPatientDTO(patient);
     }
 
-    public PatientDTO editPatientProfile(PatientEditProfileRequest request, String userId, MultipartFile avatarFile) {
+    public PatientDTO editPatientProfile(
+        PatientEditProfileRequest request,
+        String userId,
+        MultipartFile avatarFile,
+        List<MultipartFile> additionalFiles,
+        List<String> removeAdditionalFiles
+    ) {
         Patient patient = patientRepository.findById(userId).orElse(null);
         if (patient == null || patient.getStatus() == UserStatus.DELETED) {
             return null;
@@ -75,9 +83,28 @@ public class PatientManagementService {
         patient.setPhoneNumber(request.getPhoneNumber());
         patient.setDateOfBirth(request.getDateOfBirth());
         patient.setAddress(request.getAddress());
-        patient.setAvatarPath(saveAvatarFile(avatarFile));
+        String avatarPath = minioStorageService.uploadAvatar(avatarFile, patient.getId());
+        if (avatarPath != null) {
+            patient.setAvatarPath(avatarPath);
+        }
         patient.setInsuranceNumber(request.getInsuranceNumber());
         patient.setInsuranceProvider(request.getInsuranceProvider());
+
+        List<String> currentAdditionalFiles = patient.getAdditionalFiles() == null
+            ? new ArrayList<>()
+            : new ArrayList<>(patient.getAdditionalFiles());
+
+        if (removeAdditionalFiles != null && !removeAdditionalFiles.isEmpty()) {
+            minioStorageService.deleteFiles(removeAdditionalFiles);
+            currentAdditionalFiles.removeAll(removeAdditionalFiles);
+        }
+
+        List<String> uploadedAdditionalFiles = minioStorageService.uploadAdditionalFiles(additionalFiles, patient.getId());
+        if (!uploadedAdditionalFiles.isEmpty()) {
+            currentAdditionalFiles.addAll(uploadedAdditionalFiles);
+        }
+
+        patient.setAdditionalFiles(currentAdditionalFiles);
         patientRepository.save(patient);
         return convertToPatientDTO(patient);
     }
@@ -114,13 +141,7 @@ public class PatientManagementService {
         dto.setStatus(patient.getStatus());
         dto.setInsuranceNumber(patient.getInsuranceNumber());
         dto.setInsuranceProvider(patient.getInsuranceProvider());
+        dto.setAdditionalFiles(patient.getAdditionalFiles());
         return dto;
-    }
-
-    private String saveAvatarFile(MultipartFile avatarFile) {
-        if (avatarFile == null || avatarFile.isEmpty()) {
-            return null;
-        }
-        return "path/to/saved/avatar.jpg";
     }
 }

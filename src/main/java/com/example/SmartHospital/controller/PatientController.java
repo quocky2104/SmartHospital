@@ -7,11 +7,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.PaginatedResponse;
@@ -60,14 +61,22 @@ public class PatientController {
         description = "Update patient profile information including contact details, medical history, and avatar upload to MinIO"
     )
     @PreAuthorize("hasRole('PATIENT')")
-    @PostMapping("/patient/user-profile/edit")
+    @PostMapping(value = "/patient/user-profile/edit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PatientDTO>> editPatientProfile(
-        @RequestBody PatientEditProfileRequest request,
+        @RequestPart("request") PatientEditProfileRequest request,
         @AuthenticationPrincipal String userId,
-        @RequestParam(required = false) MultipartFile avatarFile
+        @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile,
+        @RequestPart(value = "additionalFiles", required = false) java.util.List<MultipartFile> additionalFiles,
+        @RequestParam(value = "removeAdditionalFiles", required = false) java.util.List<String> removeAdditionalFiles
     ) {
         try {
-            PatientDTO response = patientManagementService.editPatientProfile(request, userId, avatarFile);
+            PatientDTO response = patientManagementService.editPatientProfile(
+                request,
+                userId,
+                avatarFile,
+                additionalFiles,
+                removeAdditionalFiles
+            );
             return ResponseEntity.ok(new ApiResponse<>(200, "Successfully edited patient profile", response));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to edit patient profile", null));

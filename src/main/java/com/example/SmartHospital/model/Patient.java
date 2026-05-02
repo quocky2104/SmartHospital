@@ -3,9 +3,11 @@ package com.example.SmartHospital.model;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -28,4 +30,9 @@ public class Patient extends User{
     //JPA stores them in a separate collection table tied to the owning entity.
     @Column(name="emergency_contact")
     private List<String> emergencyContacts;
+
+    @ElementCollection
+    @CollectionTable(name = "patient_additional_files", joinColumns = @JoinColumn(name = "patient_id"))
+    @Column(name = "file_path")
+    private List<String> additionalFiles; // optional
 }

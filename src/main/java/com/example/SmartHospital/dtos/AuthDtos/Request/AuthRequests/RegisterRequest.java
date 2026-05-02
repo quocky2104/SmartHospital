@@ -31,5 +31,4 @@ public class RegisterRequest {
     private String insuranceNumber; //optional
     private String insuranceProvider; //optional
     private String avatarPath; //optional
-    private String medicalRecordPath;
 }
