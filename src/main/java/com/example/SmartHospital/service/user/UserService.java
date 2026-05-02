@@ -1,22 +1,16 @@
 package com.example.SmartHospital.service.user;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.helper.CustomIdGenerator;
-import com.example.SmartHospital.model.MedicalRecord;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.model.User;
 import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.repository.UserRepository;
-import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,18 +21,13 @@ public class UserService {
     private final UserRepository userRepository;
     private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
-    private final MinioStorageService minioStorageService;
     
     @Transactional
     public void updateLastLogin(String email) {
         userRepository.updateLastLogin(email);
     }
 
-    public User registerUser(
-        RegisterRequest registerRequest,
-        MultipartFile avatarFile,
-        List<MultipartFile> medicalRecordFiles
-    ) {
+    public User registerUser(RegisterRequest registerRequest) {
 
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
@@ -93,20 +82,7 @@ public class UserService {
         patient.setRole(RoleType.PATIENT);
         patient.setInsuranceNumber(registerRequest.getInsuranceNumber());
         patient.setInsuranceProvider(registerRequest.getInsuranceProvider());
-
-        String avatarPath = minioStorageService.uploadAvatar(avatarFile, patient.getId());
-        patient.setAvatarPath(avatarPath != null ? avatarPath : registerRequest.getAvatarPath());
-
-        List<MedicalRecord> medicalRecords = new ArrayList<>();
-        List<String> uploadedMedicalRecordPaths = minioStorageService.uploadMedicalRecordPdfs(medicalRecordFiles, patient.getId());
-        if (!uploadedMedicalRecordPaths.isEmpty()) {
-            MedicalRecord medicalRecord = new MedicalRecord();
-            medicalRecord.setPatient(patient);
-            medicalRecord.setAttachments(uploadedMedicalRecordPaths);
-            medicalRecords.add(medicalRecord);
-        }
-        
-        patient.setMedicalRecords(medicalRecords);
+        patient.setAvatarPath(registerRequest.getAvatarPath());
 
         return patientRepository.save(patient);
     }

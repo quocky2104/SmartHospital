@@ -1,7 +1,7 @@
 package com.example.SmartHospital.controller;
 
 import java.time.Duration;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -12,12 +12,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.SmartHospital.config.CustomUserDetails;
 import com.example.SmartHospital.config.jwt.JwtProvider;
@@ -60,6 +59,24 @@ public class AuthController {
     private final RedisTokenService redisTokenService;
     private final CustomUserDetailsService customUserDetailsService;
     private final AuthenticationManager authenticationManager;
+
+    @Operation(
+        summary = "Get current authenticated user",
+        description = "Validate the current access token and return the authenticated user id and roles"
+    )
+    @GetMapping("/me")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(401, "Unauthorized: Authentication required. Please login first", null));
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("userId", authentication.getName());
+        data.put("roles", authentication.getAuthorities().stream().map(a -> a.getAuthority()).toList());
+        return ResponseEntity.ok(new ApiResponse<>(200, "Authenticated", data));
+    }
 
     @Operation(
         summary = "User login",
@@ -110,11 +127,11 @@ public class AuthController {
             response.setHeader("Set-Cookie", cookieValue);
             return ResponseEntity.status(HttpStatus.ACCEPTED)
             .body(new ApiResponse<>(200, "Login successful", new TokenResponse(accessToken)));
-        } catch (BadCredentialsException e) {
+        } catch (BadCredentialsException | JwtException | IllegalArgumentException e) {
             log.error("Wrong credentials: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(new ApiResponse<>(401, "Login failed", null));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Login failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ApiResponse<>(500, "Login failed", null));
@@ -123,17 +140,15 @@ public class AuthController {
 
     @Operation(
         summary = "User registration for patients",
-        description = "Register a new patient account with optional avatar and medical record files uploaded to MinIO storage"
+        description = "Register a new patient account without file uploads"
     )
     @PostMapping(value = "/register")
     public  ResponseEntity<ApiResponse<TokenResponse>> register(
-        @Valid RegisterRequest registerRequest,
-        @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile,
-        @RequestPart(value = "medicalRecordFiles", required = false) List<MultipartFile> medicalRecordFiles,
+        @Valid @RequestBody RegisterRequest registerRequest,
         HttpServletResponse response
     ) {
         try {
-            User user = userService.registerUser(registerRequest, avatarFile, medicalRecordFiles);
+            User user = userService.registerUser(registerRequest);
             if(user == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(400, "Registration failed", null));
@@ -168,12 +183,12 @@ public class AuthController {
 
             return ResponseEntity.status(HttpStatus.CREATED)
             .body(new ApiResponse<>(201, "Registration successful", new TokenResponse(accessToken)));
-        } catch(BadCredentialsException e) {
+        } catch(BadCredentialsException | JwtException | IllegalArgumentException e) {
             log.error("Wrong credentials: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(new ApiResponse<>(401, "Registration failed", null));
         }
-        catch (Exception e) {
+        catch (RuntimeException e) {
             log.error("Registration failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ApiResponse<>(500, "Registration failed", null));

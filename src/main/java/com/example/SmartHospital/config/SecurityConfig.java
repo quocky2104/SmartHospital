@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/**",
                     "/swagger-ui/**",
+                       "/departments",
                     "/v3/api-docs/**",
                     "/chat-test.html", // remove this in production, only for testing
                     "/appointment-approval-test.html", // remove this in production, only for testing
