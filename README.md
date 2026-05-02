@@ -242,6 +242,12 @@ curl -X GET http://localhost:8080/user/patient/user-profile/view \
   -H "Authorization: Bearer <access-token>"
 ```
 
+**Testing accounts**:
+- Admin: `admin@hospital.com` / `admin123`
+- Seeded patients: `patient1@hospital.com` to `patient50@hospital.com` / `Patient123@`
+- Seeded doctors: `doctor...@hospital.com` accounts created by `DataInitializer` / `Doctor123@`
+- Seeded doctors are grouped by department and each has a lunch gap from `12:00` to `13:00`
+
 ---
 
 ### 2. Appointment Endpoints (/appointment)

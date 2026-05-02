@@ -65,6 +65,10 @@ public class CustomIdGenerator {
         return "NTF-" + randomShortUUID();
     }
 
+    public static String generateIssueId() {
+        return "ISS-" + randomShortUUID();
+    }
+
     // Generate a random short UUID
     private static String randomShortUUID() {
         return UUID.randomUUID().toString().split("-")[0].toUpperCase();

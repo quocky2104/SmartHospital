@@ -220,6 +220,7 @@
                             <label for="appointmentDate">Appointment date</label>
                             <input id="appointmentDate" type="date" />
                             <div class="calendar-note">Click the date field to open calendar popup.</div>
+                            <div id="dateWarning" style="color:#a93131; font-size:0.9rem; display:none; margin-top:6px;"></div>
                         </div>
                         <div class="field">
                             <label for="doctorIdSelect">Available doctors for selected block</label>
@@ -236,8 +237,9 @@
                     </div>
 
                     <div class="field">
-                        <label>Time blocks (30 minutes)</label>
+                        <div style="font-size:0.84rem; font-weight:800; color:#24354d;">Time blocks (30 minutes)</div>
                         <div id="timeBlocks" class="slots"></div>
+                        <div id="timeWarning" style="color:#a93131; font-size:0.9rem; display:none; margin-top:6px;"></div>
                     </div>
 
                     <div class="field">
@@ -247,7 +249,6 @@
 
                     <div class="btn-row">
                         <button id="loadAvailabilityBtn" class="btn secondary" type="button">Load doctors for block</button>
-                        <button id="testDoctorApiBtn" class="btn ghost" type="button">Test API (check console)</button>
                         <button id="bookBtn" class="btn primary" type="button">Create appointment</button>
                         <button id="simulateNotifBtn" class="btn ghost" type="button">Simulate notification</button>
                     </div>
@@ -312,7 +313,7 @@
                 </div>
             </div>
             <div class="field" style="margin-top: 10px;">
-                <label>Pick new 30-minute block</label>
+                <div style="font-size:0.84rem; font-weight:800; color:#24354d;">Pick new 30-minute block</div>
                 <div id="rescheduleBlocks" class="slots"></div>
             </div>
             <div class="btn-row" style="margin-top: 10px;">
@@ -342,8 +343,9 @@
         const notesEl = document.getElementById("notes");
         const blocksEl = document.getElementById("timeBlocks");
         const loadAvailabilityBtn = document.getElementById("loadAvailabilityBtn");
-        const testDoctorApiBtn = document.getElementById("testDoctorApiBtn");
         const bookBtn = document.getElementById("bookBtn");
+        const dateWarningEl = document.getElementById("dateWarning");
+        const timeWarningEl = document.getElementById("timeWarning");
         const refreshAppointmentsBtn = document.getElementById("refreshAppointmentsBtn");
         const appointmentsBody = document.getElementById("appointmentsBody");
         const statusEl = document.getElementById("status");
@@ -373,7 +375,14 @@
         let notificationPollId = null;
         let isConnected = false;
 
-        const today = new Date().toISOString().slice(0, 10);
+        function localDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        const today = localDateString();
         dateEl.min = today;
         rescheduleDateEl.min = today;
 
@@ -414,7 +423,51 @@
         }
 
         function updateDoctorLoadUi() {
-            loadAvailabilityBtn.disabled = !(dateEl.value && selectedBlock && departmentSelectEl.value);
+            const timeOk = validateFutureConstraints();
+            loadAvailabilityBtn.disabled = !(dateEl.value && selectedBlock && departmentSelectEl.value && timeOk);
+        }
+
+        function isBookingSlotTooSoon(dateValue, slotValue) {
+            if (!dateValue || !slotValue) return false;
+            const now = new Date();
+            const minAllowed = new Date(now.getTime() + 60 * 60 * 1000);
+            const slotDt = new Date(dateValue + 'T' + slotValue + ':00');
+            return slotDt < minAllowed;
+        }
+
+        function validateFutureConstraints() {
+            // Returns true if selected date/block satisfy ">= 1 hour from now" requirement.
+            dateWarningEl.style.display = 'none';
+            dateWarningEl.textContent = '';
+            timeWarningEl.style.display = 'none';
+            timeWarningEl.textContent = '';
+
+            if (!dateEl.value) return false;
+            const now = new Date();
+            const selDate = new Date(dateEl.value + 'T00:00:00');
+            const todayStart = new Date(localDateString(now) + 'T00:00:00');
+            if (selDate < todayStart) {
+                dateWarningEl.textContent = 'Selected date is in the past.';
+                dateWarningEl.style.display = 'block';
+                return false;
+            }
+
+            if (dateEl.value === localDateString(now)) {
+                const slotMsg = 'Same-day booking requires a slot at least 1 hour from now. Earlier slots are blocked.';
+                if (!selectedBlock) {
+                    timeWarningEl.textContent = slotMsg;
+                    timeWarningEl.style.display = 'block';
+                    return false;
+                }
+                if (isBookingSlotTooSoon(dateEl.value, selectedBlock)) {
+                    timeWarningEl.textContent = 'Selected time is too soon — pick a slot at least 1 hour from now.';
+                    timeWarningEl.style.display = 'block';
+                    return false;
+                }
+                timeWarningEl.textContent = '';
+                timeWarningEl.style.display = 'none';
+            }
+            return true;
         }
 
         function toTimeWithSeconds(hhmm) {
@@ -433,12 +486,27 @@
         function renderBlocks(container, activeValue, availableSet, unavailableHint) {
             const all = generateTimeBlocks();
             container.innerHTML = "";
+            const now = new Date();
+            const sameDay = dateEl.value && dateEl.value === localDateString(now);
             all.forEach((slot) => {
-                const available = availableSet ? availableSet.has(slot) : true;
+                let available = availableSet ? availableSet.has(slot) : true;
                 const div = document.createElement("div");
+                // If rendering the booking time blocks, also mark slots that are too soon (less than 1 hour from now) as unavailable
+                if (container === blocksEl && sameDay) {
+                    if (isBookingSlotTooSoon(dateEl.value, slot)) {
+                        available = false;
+                    }
+                }
+
                 div.className = "slot " + (available ? "available" : "unavailable") + (activeValue === slot ? " selected" : "");
                 div.textContent = slot;
-                div.title = available ? "Click to select block" : unavailableHint;
+                let title = unavailableHint;
+                if (available) {
+                    title = "Click to select block";
+                } else if (sameDay && isBookingSlotTooSoon(dateEl.value, slot)) {
+                    title = "Slot must be at least 1 hour from now";
+                }
+                div.title = title;
                 if (available) {
                     div.addEventListener("click", () => {
                         if (container === blocksEl) {
@@ -722,6 +790,8 @@
         });
 
         dateEl.addEventListener('change', () => {
+            // re-render blocks (they depend on date for past-slot marking)
+            renderBlocks(blocksEl, selectedBlock, null, "Unavailable");
             updateDoctorLoadUi();
         });
 
@@ -776,6 +846,7 @@
                 if (!doctorId) throw new Error("Choose a doctor.");
                 if (!dateEl.value) throw new Error("Choose appointment date.");
                 if (!selectedBlock) throw new Error("Choose time block.");
+                if (!validateFutureConstraints()) throw new Error('Pick a future date/time slot that is at least 1 hour ahead.');
 
                 const payload = {
                     doctorId,
@@ -955,45 +1026,7 @@
         });
 
         rescheduleDateEl.addEventListener("change", refreshAvailableForReschedule);
-        loadAvailabilityBtn.addEventListener("click", loadDoctorsByBlock);
-        
-        testDoctorApiBtn.addEventListener("click", async () => {
-            try {
-                console.clear();
-                console.log("=== DOCTOR API TEST ===");
-                if (!dateEl.value) throw new Error("Select a date first");
-                if (!selectedBlock) throw new Error("Select a time block first");
-                if (!departmentSelectEl.value) throw new Error("Select a department first");
-                
-                const testUrl = "/appointment/available-doctors?date=" + dateEl.value + "&time=" + toTimeWithSeconds(selectedBlock) + "&departmentId=" + departmentSelectEl.value;
-                console.log("Testing URL:", testUrl);
-                console.log("Token:", normalizeToken(tokenEl.value).substring(0, 20) + "...");
-                
-                const resp = await fetch(testUrl, {
-                    headers: authHeaders(),
-                    credentials: 'omit'
-                });
-                console.log("Response status:", resp.status);
-                console.log("Response statusText:", resp.statusText);
-                console.log("Response headers:", {
-                    'content-type': resp.headers.get('content-type'),
-                    'content-length': resp.headers.get('content-length')
-                });
-                
-                const data = await resp.json();
-                console.log("Response body (first 1000 chars):", JSON.stringify(data).substring(0, 1000));
-                console.log("resp.ok:", resp.ok);
-                console.log("data.data length:", data?.data?.length);
-                
-                if (!resp.ok) {
-                    console.error("ERROR:", data?.message || "Request failed");
-                } else {
-                    console.log("SUCCESS! Found " + (data?.data?.length || 0) + " doctors");
-                }
-            } catch (e) {
-                console.error("Test failed:", e.message);
-            }
-        });
+        loadAvailabilityBtn.addEventListener('click', loadDoctorsByBlock);
         
         bookBtn.addEventListener("click", createAppointment);
         refreshAppointmentsBtn.addEventListener("click", loadAppointments);

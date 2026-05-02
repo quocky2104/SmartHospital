@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
+import java.util.List;
 import com.example.SmartHospital.enums.GenderType;
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
@@ -15,12 +15,9 @@ import com.example.SmartHospital.model.Doctor;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.DepartmentRepository;
 import com.example.SmartHospital.repository.UserRepository;
-import java.util.List;
-import java.util.Random;
-import lombok.RequiredArgsConstructor;
 
 @Component 
-@RequiredArgsConstructor
+@lombok.RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner{
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
@@ -29,7 +26,7 @@ public class DataInitializer implements CommandLineRunner{
     public void run(String... args) throws Exception {
         createDepartmentListIfNotExists();
         createAdminIfNotExists();
-        createBulkDoctors(50);
+        createBulkDoctors(5);
         createBulkPatients(50);
     }
 
@@ -55,33 +52,35 @@ public class DataInitializer implements CommandLineRunner{
         List<Department> departments = departmentRepository.findAll();
         if (departments.isEmpty()) return;
 
-        Random random = new Random();
+        for (int deptIndex = 0; deptIndex < departments.size(); deptIndex++) {
+            Department department = departments.get(deptIndex);
+            String departmentSlug = department.getName().toLowerCase().replaceAll("[^a-z0-9]+", "");
 
-        for (int i = 1; i <= count; i++) {
-            String email = "doctor" + i + "@hospital.com";
+            for (int i = 1; i <= count; i++) {
+                String doctorSuffix = (deptIndex + 1) + "" + String.format("%02d", i);
+                String email = "doctor" + departmentSlug + doctorSuffix + "@hospital.com";
 
-            if (userRepository.existsByEmail(email)) continue;
+                if (userRepository.existsByEmail(email)) continue;
 
-            Doctor doctor = new Doctor();
-            doctor.setFullName("Doctor " + i);
-            doctor.setEmail(email);
-            doctor.setPhoneNumber("0910000" + String.format("%03d", i));
-            doctor.setIdentityNumber("DOC" + String.format("%04d", i));
-            doctor.setDateOfBirth(LocalDate.of(1970 + (i % 20), 1 + (i % 12), 1 + (i % 20)));
-            doctor.setGender(i % 2 == 0 ? GenderType.MALE : GenderType.FEMALE);
-            doctor.setRole(RoleType.DOCTOR);
-            doctor.setStatus(UserStatus.ACTIVE);
-            doctor.setAddress("Doctor Address " + i);
-            doctor.setHashedPassword(passwordEncoder.encode("doctor123"));
+                Doctor doctor = new Doctor();
+                doctor.setFullName("Doctor " + department.getName() + " " + i);
+                doctor.setEmail(email);
+                doctor.setPhoneNumber("091" + String.format("%07d", deptIndex * 100 + i));
+                doctor.setIdentityNumber("DOC" + String.format("%04d", deptIndex * 100 + i));
+                doctor.setDateOfBirth(LocalDate.of(1970 + ((deptIndex + i) % 20), 1 + ((i - 1) % 12), 1 + ((deptIndex + i) % 20)));
+                doctor.setGender(i % 2 == 0 ? GenderType.MALE : GenderType.FEMALE);
+                doctor.setRole(RoleType.DOCTOR);
+                doctor.setStatus(UserStatus.ACTIVE);
+                doctor.setAddress("Doctor Address " + department.getName() + " " + i);
+                doctor.setHashedPassword(passwordEncoder.encode("Doctor123@"));
 
-            doctor.setWorkingHours("08:00 - 17:00");
-            doctor.setAvailabilityStatus("Available");
-            doctor.setSpecialization("General");
+                doctor.setWorkingHours("07:00-12:00,13:00-17:00");
+                doctor.setAvailabilityStatus("AVAILABLE");
+                doctor.setSpecialization(department.getName());
+                doctor.setDepartment(department);
 
-            Department randomDept = departments.get(random.nextInt(departments.size()));
-            doctor.setDepartment(randomDept);
-
-            userRepository.save(doctor);
+                userRepository.save(doctor);
+            }
         }
     }
 
@@ -101,10 +100,10 @@ public class DataInitializer implements CommandLineRunner{
             patient.setRole(RoleType.PATIENT);
             patient.setStatus(UserStatus.ACTIVE);
             patient.setAddress("Patient Address " + i);
-            patient.setHashedPassword(passwordEncoder.encode("patient123"));
+            patient.setHashedPassword(passwordEncoder.encode("Patient123@"));
 
             patient.setInsuranceNumber("INS" + String.format("%05d", i));
-            patient.setInsuranceProvider("Default Insurance");
+            patient.setInsuranceProvider("Insurance Co " + ((i % 5) + 1));
 
             userRepository.save(patient);
         }

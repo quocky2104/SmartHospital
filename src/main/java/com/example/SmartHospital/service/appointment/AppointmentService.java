@@ -169,10 +169,12 @@ public class AppointmentService {
             );
 
         // If departmentId provided, filter doctors to that department
+        // Exclude Emergency department doctors from patient bookings
         availableDoctors = availableDoctors.stream()
             .filter(d -> d.getDepartment() != null)
             .filter(d -> !Boolean.TRUE.equals(d.getDepartment().getIsDeleted()))
             .filter(d -> departmentId == null || departmentId.isBlank() || departmentId.equals(d.getDepartment().getId()))
+            .filter(d -> !"Emergency".equalsIgnoreCase(d.getDepartment().getName()))
             .toList();
 
         return availableDoctors.stream()
