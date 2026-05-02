@@ -7,13 +7,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import com.example.SmartHospital.service.chat.OnlineStatusService;
+import com.example.SmartHospital.service.chat.OnlineStatusServicePort;
 
 import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class WebSocketPresenceListener {
-    private final OnlineStatusService onlineStatusService;
+    private final OnlineStatusServicePort onlineStatusService;
 
     @EventListener
     public void handleSessionConnected(SessionConnectedEvent event) {

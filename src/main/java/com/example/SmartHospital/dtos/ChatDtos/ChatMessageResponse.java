@@ -3,6 +3,7 @@ package com.example.SmartHospital.dtos.ChatDtos;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.example.SmartHospital.enums.MessageStatus;
 
 import lombok.Data;
 
@@ -17,5 +18,6 @@ public class ChatMessageResponse {
     private String senderId;
     private String senderName;
     private LocalDateTime timestamp;
+    private MessageStatus status;
     private List<String> attachmentUrls;
 }

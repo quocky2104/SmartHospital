@@ -392,12 +392,19 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  function updateLastOutgoingStatus(status) {
-    if (!lastOutgoingMessageElement) return;
-    const statusNode = lastOutgoingMessageElement.querySelector('.message-status .status-pill');
-    if (!statusNode) return;
-    statusNode.textContent = formatMessageStatusLabel(status);
-    statusNode.className = `status-pill ${statusPillClass(status, true)}`;
+  function updateOutgoingStatuses(status) {
+    const outgoingMessages = Array.from(document.querySelectorAll('#chatMessages .message.sent'));
+    if (outgoingMessages.length > 0) {
+      lastOutgoingMessageElement = outgoingMessages[outgoingMessages.length - 1];
+    }
+
+    outgoingMessages.forEach(messageElement => {
+      const statusNode = messageElement.querySelector('.message-status .status-pill');
+      if (!statusNode) return;
+      statusNode.textContent = formatMessageStatusLabel(status);
+      statusNode.className = `status-pill ${statusPillClass(status, true)}`;
+    });
+
     if (currentChatUserId) {
       messageStateByConversation[currentChatUserId] = status;
       renderChatSubheader();
@@ -414,7 +421,7 @@
     if (currentChatUserId) {
       messageStateByConversation[currentChatUserId] = mappedStatus;
     }
-    updateLastOutgoingStatus(mappedStatus);
+    updateOutgoingStatuses(mappedStatus);
     renderChatSubheader();
   }
 
@@ -687,6 +694,16 @@
   }
 
   function showNewChatDialog() {
+    const input = document.getElementById('newUserId');
+    if (!myRole) {
+      input.placeholder = 'Enter user ID to chat with';
+    } else if (String(myRole).toUpperCase() === 'PATIENT') {
+      input.placeholder = 'Enter DOCTOR ID to chat with';
+    } else if (String(myRole).toUpperCase() === 'DOCTOR') {
+      input.placeholder = 'Enter PATIENT ID to chat with';
+    } else {
+      input.placeholder = 'Enter user ID to chat with';
+    }
     document.getElementById('newChatModal').style.display = 'block';
   }
 

@@ -57,8 +57,7 @@ public class DataInitializer implements CommandLineRunner{
             String departmentSlug = department.getName().toLowerCase().replaceAll("[^a-z0-9]+", "");
 
             for (int i = 1; i <= count; i++) {
-                String doctorSuffix = (deptIndex + 1) + "" + String.format("%02d", i);
-                String email = "doctor" + departmentSlug + doctorSuffix + "@hospital.com";
+                String email = "doctor" + departmentSlug + String.format("%02d", i) + "@hospital.com";
 
                 if (userRepository.existsByEmail(email)) continue;
 

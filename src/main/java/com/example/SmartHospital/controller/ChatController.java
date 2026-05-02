@@ -20,23 +20,23 @@ import com.example.SmartHospital.dtos.ChatDtos.ChatMessageRequest;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageResponse;
 import com.example.SmartHospital.service.chat.ChatService;
 import com.example.SmartHospital.service.chat.MessageStatusService;
-import com.example.SmartHospital.service.chat.OnlineStatusService;
+import com.example.SmartHospital.service.chat.OnlineStatusServicePort;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/chat")
-@PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
 @RequiredArgsConstructor
 public class ChatController {
     private static final String OTHER_USER_ID = "otherUserId";
 
     private final ChatService chatService;
-    private final OnlineStatusService onlineStatusService;
+    private final OnlineStatusServicePort onlineStatusService;
     private final MessageStatusService messageStatusService;
 
     @GetMapping("/getAllChats")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
     @Operation(
         summary = "Get all chat conversations",
         description = "Retrieve all active chat conversations for the authenticated user with most recent messages"
@@ -50,6 +50,7 @@ public class ChatController {
         }    
     }
     @GetMapping("/getChatHistory")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
     @Operation(
         summary = "Get chat history",
         description = "Retrieve complete message history between the authenticated user and a specific other user"
@@ -64,6 +65,7 @@ public class ChatController {
     }
 
     @GetMapping("/isOnline")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
     @Operation(
         summary = "Check user online status",
         description = "Check if a specific user is currently online in the chat system"

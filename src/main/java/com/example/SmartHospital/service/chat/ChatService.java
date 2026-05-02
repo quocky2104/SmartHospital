@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-
+import com.example.SmartHospital.service.messaging.WebSocketMessagingService;
 import com.example.SmartHospital.dtos.ChatDtos.ChatConversationDTO;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageRequest;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageResponse;
@@ -28,7 +28,8 @@ public class ChatService {
     private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
     private final PatientRepository patientRepository;
-    private final OnlineStatusService onlineStatusService;
+    private final OnlineStatusServicePort onlineStatusService;
+    private final WebSocketMessagingService websocketMessagingService;
 
     public ChatMessageResponse createMessage(String senderId, ChatMessageRequest request, UsernamePasswordAuthenticationToken authentication) {
         String receiverId = request.getReceiverId();
@@ -59,7 +60,10 @@ public class ChatService {
         message.setAttachments(request.getAttachmentUrls());
         message.setStatus(MessageStatus.SENT);
 
-        return convertToResponse(chatRepository.save(message), senderName);
+        ChatMessageResponse response = convertToResponse(chatRepository.save(message), senderName);
+        websocketMessagingService.sendMessageToUser(senderId, receiverId, response);
+        websocketMessagingService.sendMessageToUser(senderId, senderId, response);
+        return response;
 
     }
 
@@ -114,6 +118,7 @@ public class ChatService {
         response.setSenderId(message.getSenderId());
         response.setSenderName(senderName);
         response.setTimestamp(message.getTimestamp());
+        response.setStatus(message.getStatus());
         response.setAttachmentUrls(message.getAttachments());
         return response;
     }

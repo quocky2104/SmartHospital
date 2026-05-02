@@ -248,7 +248,6 @@
                     </div>
 
                     <div class="btn-row">
-                        <button id="loadAvailabilityBtn" class="btn secondary" type="button">Load doctors for block</button>
                         <button id="bookBtn" class="btn primary" type="button">Create appointment</button>
                         <button id="simulateNotifBtn" class="btn ghost" type="button">Simulate notification</button>
                     </div>
@@ -424,7 +423,9 @@
 
         function updateDoctorLoadUi() {
             const timeOk = validateFutureConstraints();
-            loadAvailabilityBtn.disabled = !(dateEl.value && selectedBlock && departmentSelectEl.value && timeOk);
+            if (loadAvailabilityBtn) {
+                loadAvailabilityBtn.disabled = !(dateEl.value && selectedBlock && departmentSelectEl.value && timeOk);
+            }
         }
 
         function isBookingSlotTooSoon(dateValue, slotValue) {
@@ -768,7 +769,9 @@
                 empty.value = '';
                 empty.textContent = 'Select department';
                 departmentSelectEl.appendChild(empty);
+                // Exclude Emergency department from patient booking dropdown
                 (Array.isArray(list) ? list : []).forEach(d => {
+                    if (String(d?.name || '').trim().toLowerCase() === 'emergency') return;
                     const opt = document.createElement('option');
                     opt.value = d.id;
                     opt.textContent = d.name;
@@ -1026,7 +1029,6 @@
         });
 
         rescheduleDateEl.addEventListener("change", refreshAvailableForReschedule);
-        loadAvailabilityBtn.addEventListener('click', loadDoctorsByBlock);
         
         bookBtn.addEventListener("click", createAppointment);
         refreshAppointmentsBtn.addEventListener("click", loadAppointments);
