@@ -2,6 +2,7 @@ package com.example.SmartHospital.service.patient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +14,7 @@ import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
 import com.example.SmartHospital.enums.UserStatus;
+import com.example.SmartHospital.model.EmergencyContact;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.service.storage.MinioStorageService;
@@ -79,16 +81,32 @@ public class PatientManagementService {
         if (patient == null || patient.getStatus() == UserStatus.DELETED) {
             return null;
         }
-        patient.setFullName(request.getFullName());
+        patient.setFirstName(request.getFirstName());
+        patient.setLastName(request.getLastName());
+        patient.setFullName(request.getFirstName() + " " + request.getLastName());
         patient.setPhoneNumber(request.getPhoneNumber());
         patient.setDateOfBirth(request.getDateOfBirth());
         patient.setAddress(request.getAddress());
+        patient.setCity(request.getCity());
+        patient.setZipCode(request.getZipCode());
+        patient.setGender(request.getGender());
         String avatarPath = minioStorageService.uploadAvatar(avatarFile, patient.getId());
         if (avatarPath != null) {
             patient.setAvatarPath(avatarPath);
         }
         patient.setInsuranceNumber(request.getInsuranceNumber());
+        patient.setInsuranceId(request.getInsuranceId());
         patient.setInsuranceProvider(request.getInsuranceProvider());
+        patient.setBloodType(request.getBloodType());
+
+        // Map emergency contacts if provided
+        if (request.getEmergencyContacts() != null && !request.getEmergencyContacts().isEmpty()) {
+            patient.setEmergencyContacts(
+                request.getEmergencyContacts().stream()
+                    .map(ec -> new EmergencyContact(ec.getPhoneNumber(), ec.getRelationship()))
+                    .collect(Collectors.toList())
+            );
+        }
 
         List<String> currentAdditionalFiles = patient.getAdditionalFiles() == null
             ? new ArrayList<>()
@@ -130,17 +148,25 @@ public class PatientManagementService {
 
     private PatientDTO convertToPatientDTO(Patient patient) {
         PatientDTO dto = new PatientDTO();
+        dto.setId(patient.getId());
         dto.setEmail(patient.getEmail());
         dto.setFullName(patient.getFullName());
+        dto.setFirstName(patient.getFirstName());
+        dto.setLastName(patient.getLastName());
         dto.setPhoneNumber(patient.getPhoneNumber());
         dto.setIdentityNumber(patient.getIdentityNumber());
         dto.setGender(patient.getGender());
         dto.setDateOfBirth(patient.getDateOfBirth());
         dto.setAddress(patient.getAddress());
+        dto.setCity(patient.getCity());
+        dto.setZipCode(patient.getZipCode());
         dto.setAvatarPath(patient.getAvatarPath());
         dto.setStatus(patient.getStatus());
         dto.setInsuranceNumber(patient.getInsuranceNumber());
+        dto.setInsuranceId(patient.getInsuranceId());
         dto.setInsuranceProvider(patient.getInsuranceProvider());
+        dto.setBloodType(patient.getBloodType());
+        dto.setEmergencyContacts(patient.getEmergencyContacts());
         dto.setAdditionalFiles(patient.getAdditionalFiles());
         return dto;
     }

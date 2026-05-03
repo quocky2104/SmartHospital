@@ -26,10 +26,13 @@ public class Patient extends User{
     
     private String insuranceProvider;
 
-    @ElementCollection // For storing a list of emergency contact
-    //JPA stores them in a separate collection table tied to the owning entity.
-    @Column(name="emergency_contact")
-    private List<String> emergencyContacts;
+    private String insuranceId;
+
+    private String bloodType;
+
+    @ElementCollection
+    @CollectionTable(name = "patient_emergency_contacts", joinColumns = @JoinColumn(name = "patient_id"))
+    private List<EmergencyContact> emergencyContacts;
 
     @ElementCollection
     @CollectionTable(name = "patient_additional_files", joinColumns = @JoinColumn(name = "patient_id"))

@@ -1,5 +1,7 @@
 package com.example.SmartHospital.service.user;
 
+import java.util.stream.Collectors;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -7,6 +9,7 @@ import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequ
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.helper.CustomIdGenerator;
+import com.example.SmartHospital.model.EmergencyContact;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.model.User;
 import com.example.SmartHospital.repository.PatientRepository;
@@ -38,9 +41,6 @@ public class UserService {
         if(userRepository.existsByIdentityNumber(registerRequest.getIdentityNumber())) {
             throw new IllegalArgumentException("Identity number already exists");
         }
-        if(patientRepository.existsByInsuranceNumber(registerRequest.getInsuranceNumber())) {
-            throw new IllegalArgumentException("Insurance number already exists");
-        }
 
         //check phone number is it valid or not
         if(!registerRequest.getPhoneNumber().matches("\\d{10,15}")) {
@@ -50,11 +50,7 @@ public class UserService {
         if(!registerRequest.getIdentityNumber().matches("\\w{5,20}")) {
             throw new IllegalArgumentException("Invalid identity number");
         }
-        // check insurance number is it valid or not
-        if(registerRequest.getInsuranceNumber() != null && 
-           !registerRequest.getInsuranceNumber().matches("\\w{5,20}")) {
-            throw new IllegalArgumentException("Invalid insurance number");
-        }
+        
         //check if email is valid or not
         if(!registerRequest.getEmail().matches("^[A-Za-z0-9+_.%-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
             throw new IllegalArgumentException("Invalid email format");
@@ -72,17 +68,32 @@ public class UserService {
         patient.setId(CustomIdGenerator.generateUserId());
         patient.setEmail(registerRequest.getEmail());
         patient.setHashedPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        patient.setFullName(registerRequest.getName());
+        patient.setFirstName(registerRequest.getFirstName());
+        patient.setLastName(registerRequest.getLastName());
+        patient.setFullName(registerRequest.getFirstName() + " " + registerRequest.getLastName());
         patient.setPhoneNumber(registerRequest.getPhoneNumber());
         patient.setIdentityNumber(registerRequest.getIdentityNumber());
         patient.setGender(registerRequest.getGender());
         patient.setDateOfBirth(registerRequest.getDateOfBirth());
         patient.setAddress(registerRequest.getAddress());
+        patient.setCity(registerRequest.getCity());
+        patient.setZipCode(registerRequest.getZipCode());
         patient.setStatus(UserStatus.ACTIVE);
         patient.setRole(RoleType.PATIENT);
         patient.setInsuranceNumber(registerRequest.getInsuranceNumber());
+        patient.setInsuranceId(registerRequest.getInsuranceId());
         patient.setInsuranceProvider(registerRequest.getInsuranceProvider());
+        patient.setBloodType(registerRequest.getBloodType());
         patient.setAvatarPath(registerRequest.getAvatarPath());
+        
+        // Map emergency contacts if provided
+        if (registerRequest.getEmergencyContacts() != null && !registerRequest.getEmergencyContacts().isEmpty()) {
+            patient.setEmergencyContacts(
+                registerRequest.getEmergencyContacts().stream()
+                    .map(ec -> new EmergencyContact(ec.getPhoneNumber(), ec.getRelationship()))
+                    .collect(Collectors.toList())
+            );
+        }
 
         return patientRepository.save(patient);
     }

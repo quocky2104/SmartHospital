@@ -21,11 +21,13 @@ public class MinioBucketInitializer {
             if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("request-attachments").build())) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket("request-attachments").build());
             }
-            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("medicalrecord-attachments").build())) {
-                minioClient.makeBucket(MakeBucketArgs.builder().bucket("medicalrecord-attachments").build());
+            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("message-attachments").build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket("message-attachments").build());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // Log the error and rethrow as a runtime exception to prevent application from starting
+            System.err.println("Error initializing Minio buckets: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize Minio buckets", e);
         }
         
     }

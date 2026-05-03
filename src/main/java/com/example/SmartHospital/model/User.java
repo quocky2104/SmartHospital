@@ -41,6 +41,12 @@ public class User {
     @Column(nullable = false)
     private String fullName;
 
+    @Column(nullable = true)
+    private String firstName;
+
+    @Column(nullable = true)
+    private String lastName;
+
     @Column(nullable = false, unique = true)
     private String phoneNumber;
 
@@ -59,6 +65,10 @@ public class User {
     private String identityNumber;
 
     private String address;
+
+    private String city;
+
+    private String zipCode;
 
     @Enumerated(EnumType.STRING)
     private UserStatus status;
