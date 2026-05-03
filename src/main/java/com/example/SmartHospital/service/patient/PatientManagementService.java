@@ -160,7 +160,9 @@ public class PatientManagementService {
         dto.setAddress(patient.getAddress());
         dto.setCity(patient.getCity());
         dto.setZipCode(patient.getZipCode());
-        dto.setAvatarPath(patient.getAvatarPath());
+        // Return a presigned MinIO URL for API consumers while DB stores the bucket/object path
+        String storedAvatar = patient.getAvatarPath();
+        dto.setAvatarPath(minioStorageService.toPresignedGetUrl(storedAvatar));
         dto.setStatus(patient.getStatus());
         dto.setInsuranceNumber(patient.getInsuranceNumber());
         dto.setInsuranceId(patient.getInsuranceId());

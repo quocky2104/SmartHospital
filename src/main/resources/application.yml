@@ -50,12 +50,17 @@ spring:
     hibernate:
       ddl-auto: update #auto create and update table
     show-sql: true #Logs SQL queries to console
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
 
 minio:
   url: ${MINIO_URL}
   accessKey: ${MINIO_USER}
   secretKey: ${MINIO_PASSWORD}
   bucket: avatars
+  presigned-expiry-seconds: ${MINIO_PRESIGNED_EXPIRY_SECONDS:3600}
 
 jwt:
   secret: ${JWT_SECRET}

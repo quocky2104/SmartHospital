@@ -77,10 +77,9 @@ public class UserService {
         patient.setDateOfBirth(registerRequest.getDateOfBirth());
         patient.setAddress(registerRequest.getAddress());
         patient.setCity(registerRequest.getCity());
-        patient.setZipCode(registerRequest.getZipCode());
         patient.setStatus(UserStatus.ACTIVE);
         patient.setRole(RoleType.PATIENT);
-        patient.setInsuranceId(registerRequest.getInsuranceId());
+        patient.setInsuranceNumber(registerRequest.getInsuranceNumber());
         patient.setInsuranceProvider(registerRequest.getInsuranceProvider());
         patient.setAvatarPath(registerRequest.getAvatarPath());
         

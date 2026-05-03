@@ -1,5 +1,6 @@
 package com.example.SmartHospital.controller;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,13 +13,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
-import com.example.SmartHospital.service.patient.PatientManagementService;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
+import com.example.SmartHospital.service.patient.PatientManagementService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -69,18 +69,14 @@ public class PatientController {
         @RequestPart(value = "additionalFiles", required = false) java.util.List<MultipartFile> additionalFiles,
         @RequestParam(value = "removeAdditionalFiles", required = false) java.util.List<String> removeAdditionalFiles
     ) {
-        try {
-            PatientDTO response = patientManagementService.editPatientProfile(
-                request,
-                userId,
-                avatarFile,
-                additionalFiles,
-                removeAdditionalFiles
-            );
-            return ResponseEntity.ok(new ApiResponse<>(200, "Successfully edited patient profile", response));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to edit patient profile", null));
-        }
+        PatientDTO response = patientManagementService.editPatientProfile(
+            request,
+            userId,
+            avatarFile,
+            additionalFiles,
+            removeAdditionalFiles
+        );
+        return ResponseEntity.ok(new ApiResponse<>(200, "Successfully edited patient profile", response));
     }
 
     @Operation(

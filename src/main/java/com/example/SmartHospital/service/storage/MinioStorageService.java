@@ -10,9 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.Result;
+import io.minio.http.Method;
+import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -29,6 +34,9 @@ public class MinioStorageService {
     @Value("${minio.additional-file-bucket:request-attachments}")
     private String additionalFileBucket;
 
+    @Value("${minio.presigned-expiry-seconds:3600}")
+    private Integer presignedExpirySeconds;
+
     public String uploadAvatar(MultipartFile avatarFile, String userId) {
         if (avatarFile == null || avatarFile.isEmpty()) {
             return null;
@@ -42,7 +50,38 @@ public class MinioStorageService {
         String extension = resolveFileExtension(avatarFile.getOriginalFilename(), "png");
         String objectName = userId + "/avatar." + extension;
         uploadFile(avatarBucket, objectName, avatarFile, contentType);
+        cleanupOldAvatarVariants(userId, objectName);
         return avatarBucket + "/" + objectName;
+    }
+
+    // Generates a presigned GET URL from a stored path like "bucket/object..."
+    public String toPresignedGetUrl(String storedPath) {
+        if (storedPath == null || storedPath.isBlank()) {
+            return storedPath;
+        }
+
+        String normalized = storedPath.startsWith("/") ? storedPath.substring(1) : storedPath;
+        String[] parts = normalized.split("/", 2);
+        if (parts.length != 2) {
+            return storedPath;
+        }
+
+        int expiry = presignedExpirySeconds == null || presignedExpirySeconds <= 0
+            ? 3600
+            : presignedExpirySeconds;
+
+        try {
+            return minioClient.getPresignedObjectUrl(
+                GetPresignedObjectUrlArgs.builder()
+                    .method(Method.GET)
+                    .bucket(parts[0])
+                    .object(parts[1])
+                    .expiry(expiry)
+                    .build()
+            );
+        } catch (Exception e) {
+            throw new MinioUploadException("Failed to generate presigned URL", e);
+        }
     }
 
     public List<String> uploadMedicalRecordPdfs(List<MultipartFile> medicalRecordFiles, String userId) {
@@ -128,6 +167,34 @@ public class MinioStorageService {
             );
         } catch (Exception e) {
             throw new MinioUploadException("Failed to upload file to MinIO", e);
+        }
+    }
+
+    private void cleanupOldAvatarVariants(String userId, String keepObjectName) {
+        String avatarPrefix = userId + "/avatar.";
+        try {
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                ListObjectsArgs.builder()
+                    .bucket(avatarBucket)
+                    .prefix(avatarPrefix)
+                    .recursive(true)
+                    .build()
+            );
+
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                String objectName = item.objectName();
+                if (!keepObjectName.equals(objectName)) {
+                    minioClient.removeObject(
+                        RemoveObjectArgs.builder()
+                            .bucket(avatarBucket)
+                            .object(objectName)
+                            .build()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            throw new MinioUploadException("Failed to clean up old avatar files", e);
         }
     }
 

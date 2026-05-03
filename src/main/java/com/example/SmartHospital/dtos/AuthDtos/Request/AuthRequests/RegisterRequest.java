@@ -36,15 +36,13 @@ public class RegisterRequest {
     @NotBlank
     private String city;
 
-    private String zipCode; //optional
-
     @NotNull
     private GenderType gender;
 
     @NotNull
     private LocalDate dateOfBirth;
 
-    private String insuranceId; //optional
+    private String insuranceNumber; //optional
     private String insuranceProvider; //optional
     private String avatarPath; //optional
     
