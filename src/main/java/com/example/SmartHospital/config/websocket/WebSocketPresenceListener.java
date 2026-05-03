@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import com.example.SmartHospital.service.chat.MessageStatusService;
 import com.example.SmartHospital.service.chat.OnlineStatusServicePort;
 
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WebSocketPresenceListener {
     private final OnlineStatusServicePort onlineStatusService;
+    private final MessageStatusService messageStatusService;
 
     @EventListener
     public void handleSessionConnected(SessionConnectedEvent event) {
@@ -22,6 +24,8 @@ public class WebSocketPresenceListener {
         if (userPrincipal != null) {
             String userId = userPrincipal.getName(); // userId from JWT claims will be used as Principal name
             onlineStatusService.setOnline(userId);
+            // Mark any pending incoming messages as delivered for this user and notify senders
+            messageStatusService.handleUserConnected(userId);
         }
     }
 

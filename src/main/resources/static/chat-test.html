@@ -197,6 +197,9 @@
   let currentChatUserId = null;
   let conversations = {};
   let jwtToken = null;
+  let messagesStore = {}; // map otherUserId -> full messages array
+  const PAGE_SIZE = 10;
+  let pagesLoadedByConversation = {}; // map otherUserId -> pages loaded
   let onlinePollingId = null;
   let typingResetTimeout = null;
   let typingSendThrottle = null;
@@ -210,6 +213,12 @@
     DELIVERED: 'DELIVERED',
     READ: 'READ',
     RECEIVED: 'RECEIVED'
+  };
+
+  const MESSAGE_STATE_PRIORITY = {
+    [MESSAGE_STATE.SENT]: 1,
+    [MESSAGE_STATE.DELIVERED]: 2,
+    [MESSAGE_STATE.READ]: 3
   };
 
   function parseJwt(token) {
@@ -331,13 +340,41 @@
   }
 
   function formatMessageStatusLabel(status) {
-    if (status === MESSAGE_STATE.READ) {
+    const normalized = normalizeMessageStatus(status);
+    if (normalized === MESSAGE_STATE.READ) {
       return 'SEEN';
     }
-    if (status === MESSAGE_STATE.DELIVERED) {
+    if (normalized === MESSAGE_STATE.DELIVERED || normalized === MESSAGE_STATE.RECEIVED) {
       return 'RECEIVED';
     }
-    return status;
+    return normalized;
+  }
+
+  function normalizeMessageStatus(status) {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === MESSAGE_STATE.RECEIVED) {
+      return MESSAGE_STATE.DELIVERED;
+    }
+    return normalized;
+  }
+
+  function getMessageStatePriority(status) {
+    return MESSAGE_STATE_PRIORITY[normalizeMessageStatus(status)] || 0;
+  }
+
+  function getHigherMessageStatus(currentStatus, nextStatus) {
+    const currentPriority = getMessageStatePriority(currentStatus);
+    const nextPriority = getMessageStatePriority(nextStatus);
+    return nextPriority >= currentPriority ? normalizeMessageStatus(nextStatus) : normalizeMessageStatus(currentStatus);
+  }
+
+  function setConversationStatus(userId, status) {
+    if (!userId) {
+      return;
+    }
+
+    const currentStatus = messageStateByConversation[userId];
+    messageStateByConversation[userId] = getHigherMessageStatus(currentStatus, status);
   }
 
   // Determine pill color based on message status and ownership
@@ -359,12 +396,12 @@
     const timestamp = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const time = timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const date = timestamp.toLocaleDateString();
-    const rawStatus = msg._status || msg.status || (isMine ? MESSAGE_STATE.SENT : MESSAGE_STATE.RECEIVED);
+    const rawStatus = normalizeMessageStatus(msg._status || msg.status || (isMine ? MESSAGE_STATE.SENT : MESSAGE_STATE.RECEIVED));
     const textStatus = formatMessageStatusLabel(rawStatus);
     const pillClass = statusPillClass(rawStatus, isMine);
     const messageText = msg.messageText || '';
     const statusMarkup = isMine
-      ? `<div class="message-status"><span class="status-pill ${pillClass}">${textStatus}</span></div>`
+      ? `<div class="message-status"><span class="status-pill ${pillClass}" data-status="${rawStatus}">${textStatus}</span></div>`
       : '';
 
     return `
@@ -384,6 +421,14 @@
     }
     container.insertAdjacentHTML('beforeend', renderMessageBubble(msg));
 
+    // persist into messagesStore for the active conversation
+    if (currentChatUserId) {
+      messagesStore[currentChatUserId] = messagesStore[currentChatUserId] || [];
+      messagesStore[currentChatUserId].push(msg);
+      // keep pagesLoaded config
+      pagesLoadedByConversation[currentChatUserId] = pagesLoadedByConversation[currentChatUserId] || 1;
+    }
+
     const added = container.lastElementChild;
     if (msg.senderId === myUserId) {
       lastOutgoingMessageElement = added;
@@ -393,6 +438,7 @@
   }
 
   function updateOutgoingStatuses(status) {
+    const normalizedStatus = normalizeMessageStatus(status);
     const outgoingMessages = Array.from(document.querySelectorAll('#chatMessages .message.sent'));
     if (outgoingMessages.length > 0) {
       lastOutgoingMessageElement = outgoingMessages[outgoingMessages.length - 1];
@@ -401,28 +447,58 @@
     outgoingMessages.forEach(messageElement => {
       const statusNode = messageElement.querySelector('.message-status .status-pill');
       if (!statusNode) return;
-      statusNode.textContent = formatMessageStatusLabel(status);
-      statusNode.className = `status-pill ${statusPillClass(status, true)}`;
+      const currentStatus = normalizeMessageStatus(statusNode.dataset.status || statusNode.textContent);
+      const nextStatus = getHigherMessageStatus(currentStatus, normalizedStatus);
+      statusNode.dataset.status = nextStatus;
+      statusNode.textContent = formatMessageStatusLabel(nextStatus);
+      statusNode.className = `status-pill ${statusPillClass(nextStatus, true)}`;
     });
 
     if (currentChatUserId) {
-      messageStateByConversation[currentChatUserId] = status;
+      setConversationStatus(currentChatUserId, normalizedStatus);
+      // update stored messages statuses for sender's messages to keep in sync
+      const store = messagesStore[currentChatUserId];
+      if (store && store.length) {
+        for (let i = store.length - 1; i >= 0; i--) {
+          const m = store[i];
+          if (m.senderId === myUserId && (m.status === MESSAGE_STATE.SENT || (m._status || '').toUpperCase() === MESSAGE_STATE.SENT)) {
+            // only upgrade SENT -> DELIVERED/READ
+            const current = normalizeMessageStatus(m.status || m._status);
+            const next = getHigherMessageStatus(current, normalizedStatus);
+            m._status = next;
+            m.status = next;
+          }
+        }
+      }
       renderChatSubheader();
     }
   }
 
   function handleIncomingStatus(payload) {
+    // payload can be a plain string or an object { status, otherUserId }
     const status = typeof payload === 'string' ? payload : (payload?.status || payload?.messageStatus || '');
-    const normalized = String(status).toUpperCase();
+    const otherUserId = (typeof payload === 'object') ? (payload?.otherUserId || payload?.otherUser || payload?.fromUserId || payload?.senderId) : null;
+    const normalized = normalizeMessageStatus(status);
     if (![MESSAGE_STATE.SENT, MESSAGE_STATE.DELIVERED, MESSAGE_STATE.READ].includes(normalized)) {
       return;
     }
-    const mappedStatus = normalized === MESSAGE_STATE.DELIVERED ? MESSAGE_STATE.RECEIVED : normalized;
-    if (currentChatUserId) {
-      messageStateByConversation[currentChatUserId] = mappedStatus;
+
+    if (otherUserId) {
+      // Update conversation-level status and only update the DOM when the conversation is open
+      setConversationStatus(otherUserId, normalized);
+      if (currentChatUserId === otherUserId) {
+        updateOutgoingStatuses(normalized);
+      }
+    } else {
+      // Backwards-compatible: apply to currently open conversation
+      if (currentChatUserId) {
+        setConversationStatus(currentChatUserId, normalized);
+        updateOutgoingStatuses(normalized);
+      }
     }
-    updateOutgoingStatuses(mappedStatus);
+
     renderChatSubheader();
+    renderConversations(Object.values(conversations));
   }
 
   function showTypingIndicator(show) {
@@ -586,23 +662,71 @@
     // Mark as active in sidebar
     document.querySelectorAll('.conversation').forEach(el => el.classList.remove('active'));
 
-    // Load chat history
+    // Load chat history (full payload stored client-side for paging)
     try {
       const response = await fetch(`/chat/getChatHistory?otherUserId=${userId}`, {
         headers: { 'Authorization': 'Bearer ' + jwtToken }
       });
-      
       if (!response.ok) {
         console.error('Failed to load chat history:', response.status);
         return;
       }
-      
       const messages = await response.json();
       console.log('Chat history:', messages);
-      renderMessages(messages);
+      messagesStore[userId] = messages || [];
+      pagesLoadedByConversation[userId] = 1;
+      renderMessagesPage(userId);
     } catch (e) {
       console.error('Failed to load chat history:', e);
     }
+  }
+
+  function renderMessagesPage(userId) {
+    const container = document.getElementById('chatMessages');
+    const allMessages = messagesStore[userId] || [];
+    const pages = pagesLoadedByConversation[userId] || 1;
+    const start = Math.max(0, allMessages.length - PAGE_SIZE * pages);
+    const visible = allMessages.slice(start);
+
+    if (visible.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">No messages yet. Say hello!</p>';
+      return;
+    }
+
+    // Render visible slice
+    container.innerHTML = visible.map(msg => renderMessageBubble(msg)).join('');
+
+    // Track last outgoing
+    const allMine = Array.from(container.querySelectorAll('.message.sent'));
+    if (allMine.length > 0) lastOutgoingMessageElement = allMine[allMine.length - 1];
+
+    // Update conversation-level status from last outgoing messages
+    const latestOutgoingStatus = allMessages
+      .filter(msg => msg.senderId === myUserId)
+      .reduce((latestStatus, msg) => getHigherMessageStatus(latestStatus, msg.status || msg._status), '');
+
+    if (userId && latestOutgoingStatus) setConversationStatus(userId, latestOutgoingStatus);
+
+    // Scroll to bottom on initial render, but keep position when loading older messages
+    const containerElem = container;
+    containerElem.scrollTop = containerElem.scrollHeight;
+
+    // Attach scroll handler for lazy loading older messages
+    containerElem.onscroll = async function() {
+      if (containerElem.scrollTop <= 40) {
+        // load older page if available
+        const total = messagesStore[userId].length;
+        const pagesLoaded = pagesLoadedByConversation[userId] || 1;
+        if (PAGE_SIZE * pagesLoaded < total) {
+          const prevHeight = containerElem.scrollHeight;
+          pagesLoadedByConversation[userId] = pagesLoaded + 1;
+          // render more messages
+          renderMessagesPage(userId);
+          // preserve viewport position
+          containerElem.scrollTop = containerElem.scrollHeight - prevHeight + 10;
+        }
+      }
+    };
   }
 
   function renderMessages(messages) {
@@ -620,6 +744,14 @@
       lastOutgoingMessageElement = allMine[allMine.length - 1];
     }
 
+    const latestOutgoingStatus = messages
+      .filter(msg => msg.senderId === myUserId)
+      .reduce((latestStatus, msg) => getHigherMessageStatus(latestStatus, msg.status || msg._status), '');
+
+    if (currentChatUserId && latestOutgoingStatus) {
+      setConversationStatus(currentChatUserId, latestOutgoingStatus);
+    }
+
     container.scrollTop = container.scrollHeight;
   }
 
@@ -634,12 +766,18 @@
     // If viewing this conversation, append message
     if (currentChatUserId === otherUserId || currentChatUserId === msg.senderId || msg.senderId === myUserId) {
       if (msg.senderId === myUserId) {
-        msg._status = messageStateByConversation[otherUserId] || MESSAGE_STATE.SENT;
+        msg._status = normalizeMessageStatus(msg.status || MESSAGE_STATE.SENT);
       } else {
         msg._status = MESSAGE_STATE.RECEIVED;
       }
 
-      appendMessage(msg);
+      // Persist into store if viewing this conversation
+      messagesStore[otherUserId] = messagesStore[otherUserId] || [];
+      messagesStore[otherUserId].push(msg);
+      // If current conversation, render only appended message for performance
+      if (currentChatUserId === otherUserId) {
+        appendMessage(msg);
+      }
 
       if (msg.senderId !== myUserId && currentChatUserId === msg.senderId) {
         sendLifecycleStatus('markAsDelivered');
@@ -676,15 +814,13 @@
     };
 
     const recipientOnline = await isUserOnline(currentChatUserId);
-    const initialState = recipientOnline ? MESSAGE_STATE.RECEIVED : MESSAGE_STATE.SENT;
 
     console.log('Sending message:', payload, 'recipientOnline:', recipientOnline);
-    messageStateByConversation[currentChatUserId] = initialState;
+    setConversationStatus(currentChatUserId, MESSAGE_STATE.SENT);
     sendLifecycleStatus('markAsSent');
     stompClient.send('/app/send', {}, JSON.stringify(payload));
 
     if (recipientOnline) {
-      // If receiver is already online, we surface RECEIVED immediately.
       sendLifecycleStatus('markAsDelivered');
     }
 

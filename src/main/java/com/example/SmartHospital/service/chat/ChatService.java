@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import com.example.SmartHospital.service.messaging.WebSocketMessagingService;
+
 import com.example.SmartHospital.dtos.ChatDtos.ChatConversationDTO;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageRequest;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageResponse;
@@ -19,6 +19,7 @@ import com.example.SmartHospital.repository.DoctorPatientChatRepository;
 import com.example.SmartHospital.repository.DoctorRepository;
 import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.repository.UserRepository;
+import com.example.SmartHospital.service.messaging.WebSocketMessagingService;
 
 import lombok.RequiredArgsConstructor;
 @Service
