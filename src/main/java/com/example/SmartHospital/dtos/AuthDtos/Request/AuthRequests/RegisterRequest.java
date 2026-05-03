@@ -44,10 +44,8 @@ public class RegisterRequest {
     @NotNull
     private LocalDate dateOfBirth;
 
-    private String insuranceNumber; //optional
     private String insuranceId; //optional
     private String insuranceProvider; //optional
-    private String bloodType; //optional
     private String avatarPath; //optional
     
     private List<EmergencyContactRequest> emergencyContacts; //optional
