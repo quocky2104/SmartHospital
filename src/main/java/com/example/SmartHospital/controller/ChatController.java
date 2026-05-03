@@ -94,6 +94,30 @@ public class ChatController {
         
     }
 
+    @MessageMapping("/typing")
+    @Operation(
+        summary = "Typing indicator",
+        description = "Forward typing state to the other user's private queue"
+    )
+    public void typing(@Payload Map<String, Object> request, Principal principal) {
+        if (principal == null) {
+            throw new IllegalArgumentException("User must be authenticated to send typing indicators");
+        }
+
+        String senderId = principal.getName();
+        Object receiverValue = request.get(OTHER_USER_ID);
+        if (receiverValue == null) {
+            receiverValue = request.get("receiverId");
+        }
+        String receiverId = receiverValue != null ? String.valueOf(receiverValue) : null;
+        if (receiverId == null || receiverId.isBlank()) {
+            throw new IllegalArgumentException("otherUserId or receiverId is required for typing indicators");
+        }
+
+        boolean isTyping = Boolean.parseBoolean(String.valueOf(request.getOrDefault("isTyping", false)));
+        messageStatusService.sendTypingIndicator(senderId, receiverId, isTyping);
+    }
+
     @MessageMapping("/markAsRead")
     @Operation(
         summary = "Mark messages as read",

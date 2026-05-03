@@ -59,6 +59,14 @@ public class MessageStatusService {
         websocketMessagingService.sendMessageStatus(principal.getName(), otherUserId, Map.of("status", MessageStatus.SENT.name(), "otherUserId", principal.getName()));
     }
 
+    public void sendTypingIndicator(String senderId, String receiverId, boolean isTyping) {
+        websocketMessagingService.sendTypingIndicator(senderId, receiverId, Map.of(
+            "senderId", senderId,
+            "receiverId", receiverId,
+            "isTyping", isTyping
+        ));
+    }
+
     @Transactional
     public void handleUserConnected(String userId) {
         // When a user connects, mark any messages addressed to them that are still SENT as DELIVERED
