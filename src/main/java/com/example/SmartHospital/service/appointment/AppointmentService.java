@@ -184,7 +184,6 @@ public class AppointmentService {
                                     dto.setId(d.getId());
                                     dto.setFullName(d.getFullName());
                                     dto.setEmail(d.getEmail());
-                                    dto.setSpecialization(d.getSpecialization());
                                     dto.setWorkingHours(d.getWorkingHours());
                                     dto.setAvailabilityStatus(d.getAvailabilityStatus());
                                     dto.setDepartmentId(d.getDepartment() == null ? null : d.getDepartment().getId());

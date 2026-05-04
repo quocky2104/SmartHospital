@@ -46,9 +46,6 @@ public class DoctorCreateRequest {
     @NotBlank(message = "Availability status is required")
     private String availabilityStatus;
 
-    @NotBlank(message = "Specialization is required")
-    private String specialization;
-
     @NotBlank(message = "Department ID is required")
     private String departmentId;
 }

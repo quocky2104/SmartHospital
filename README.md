@@ -378,7 +378,7 @@ curl -X PUT http://localhost:8080/prescriptions/pres_123 \
 
 **Doctor Excel Import Format**:
 ```
-fullname | email | password | phonenumber | identitynumber | gender | dateofbirth | address | workinghours | availabilitystatus | specialization | departmentname
+fullname | email | password | phonenumber | identitynumber | gender | dateofbirth | address | workinghours | availabilitystatus | departmentname
 Dr. John | john@hosp.com | Pass123! | 1234567890 | DOC123 | MALE | 1980-01-15 | Main St | 09:00-17:00 | AVAILABLE | Cardiology | Cardiology
 ```
 

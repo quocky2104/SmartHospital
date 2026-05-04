@@ -75,7 +75,6 @@ public class DataInitializer implements CommandLineRunner{
 
                 doctor.setWorkingHours("07:00-12:00,13:00-17:00");
                 doctor.setAvailabilityStatus("AVAILABLE");
-                doctor.setSpecialization(department.getName());
                 doctor.setDepartment(department);
 
                 userRepository.save(doctor);

@@ -23,6 +23,5 @@ public class DoctorEditProfileRequest {
     private String identityNumber;
     private String workingHours;
     private String availabilityStatus;
-    private String specialization;
     private String departmentId;
 }

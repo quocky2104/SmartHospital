@@ -16,8 +16,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, String> {
     @Query("SELECT d FROM Doctor d WHERE d.status <> :deletedStatus AND (" +
            "LOWER(d.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(d.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "d.phoneNumber LIKE CONCAT('%', :search, '%') OR " +
-           "d.specialization LIKE LOWER(CONCAT('%', :search, '%')))")
+           "d.phoneNumber LIKE CONCAT('%', :search, '%'))")
     Page<Doctor> searchDoctors(String search, UserStatus deletedStatus, Pageable pageable);
 
     Page<Doctor> findByStatusNot(UserStatus status, Pageable pageable);

@@ -59,7 +59,7 @@ public class DoctorController {
 
     @Operation(
         summary = "Edit doctor profile",
-        description = "Update doctor profile information including specialization, working hours, and avatar upload to MinIO"
+        description = "Update doctor profile information including department working hours, and avatar upload to MinIO"
     )
     @PreAuthorize("hasRole('DOCTOR')")
     @PostMapping("/doctor/user-profile/edit")

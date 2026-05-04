@@ -105,7 +105,6 @@ public class DoctorManagementService {
         doctor.setAddress(request.getAddress());
         doctor.setWorkingHours(request.getWorkingHours());
         doctor.setAvailabilityStatus(request.getAvailabilityStatus());
-        doctor.setSpecialization(request.getSpecialization());
         doctor.setRole(RoleType.DOCTOR);
         doctor.setStatus(UserStatus.ACTIVE);
         doctor.setDepartment(department);
@@ -147,7 +146,6 @@ public class DoctorManagementService {
         if (request.getDateOfBirth() != null) doctor.setDateOfBirth(request.getDateOfBirth());
         if (request.getWorkingHours() != null) doctor.setWorkingHours(request.getWorkingHours());
         if (request.getAvailabilityStatus() != null) doctor.setAvailabilityStatus(request.getAvailabilityStatus());
-        if (request.getSpecialization() != null) doctor.setSpecialization(request.getSpecialization());
         if (request.getStatus() != null) doctor.setStatus(request.getStatus());
 
         if (request.getDepartmentId() != null && !request.getDepartmentId().isBlank()) {
@@ -175,7 +173,6 @@ public class DoctorManagementService {
         }
         doctor.setWorkingHours(request.getWorkingHours());
         doctor.setAvailabilityStatus(request.getAvailabilityStatus());
-        doctor.setSpecialization(request.getSpecialization());
         doctorRepository.save(doctor);
         return convertToDoctorDTO(doctor);
     }
@@ -211,6 +208,9 @@ public class DoctorManagementService {
         dto.setAddress(doctor.getAddress());
         dto.setAvatarPath(doctor.getAvatarPath());
         dto.setStatus(doctor.getStatus());
+        if (doctor.getDepartment() != null) {
+            dto.setDepartmentId(doctor.getDepartment().getId());
+        }
         return dto;
     }
 }

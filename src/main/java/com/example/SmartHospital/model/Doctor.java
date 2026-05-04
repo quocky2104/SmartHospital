@@ -20,8 +20,6 @@ public class Doctor extends User {
     private String workingHours; //Ex: "09:00-12:00,13:00-17:00"
     @Column(nullable=false)
     private String availabilityStatus;
-    @Column(nullable=false)
-    private String specialization;
 
     @OneToMany(mappedBy = "doctor")
     private List<Appointment> appointments;
