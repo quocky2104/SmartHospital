@@ -19,6 +19,13 @@ public interface DoctorRepository extends JpaRepository<Doctor, String> {
            "d.phoneNumber LIKE CONCAT('%', :search, '%'))")
     Page<Doctor> searchDoctors(String search, UserStatus deletedStatus, Pageable pageable);
 
+    @Query("SELECT d FROM Doctor d WHERE d.status <> :deletedStatus AND " +
+           "(:search IS NULL OR :search = '' OR (LOWER(d.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(d.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "d.phoneNumber LIKE CONCAT('%', :search, '%'))) AND " +
+           "(:departmentId IS NULL OR :departmentId = '' OR d.department.id = :departmentId)")
+    Page<Doctor> searchDoctorsWithFilter(String search, String departmentId, UserStatus deletedStatus, Pageable pageable);
+
     Page<Doctor> findByStatusNot(UserStatus status, Pageable pageable);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);

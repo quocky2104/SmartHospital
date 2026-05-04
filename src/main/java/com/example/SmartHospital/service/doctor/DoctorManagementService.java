@@ -36,7 +36,7 @@ public class DoctorManagementService {
     private final PasswordEncoder passwordEncoder;
     private final MinioStorageService minioStorageService;
 
-    public PaginatedResponse<DoctorDTO> getDoctors(int pageNumber, int pageSize, String search) {
+    public PaginatedResponse<DoctorDTO> getDoctors(int pageNumber, int pageSize, String search, String departmentId) {
         if (pageNumber < 0) {
             pageNumber = 0;
         }
@@ -49,8 +49,8 @@ public class DoctorManagementService {
 
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
         Page<Doctor> doctorPage;
-        if (search != null && !search.trim().isEmpty()) {
-            doctorPage = doctorRepository.searchDoctors(search.trim(), UserStatus.DELETED, pageable);
+        if ((search != null && !search.trim().isEmpty()) || (departmentId != null && !departmentId.trim().isEmpty())) {
+            doctorPage = doctorRepository.searchDoctorsWithFilter(search, departmentId, UserStatus.DELETED, pageable);
         } else {
             doctorPage = doctorRepository.findByStatusNot(UserStatus.DELETED, pageable);
         }

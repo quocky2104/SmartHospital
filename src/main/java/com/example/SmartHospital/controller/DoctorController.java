@@ -47,10 +47,12 @@ public class DoctorController {
         @Parameter(description = "Page size (max 100)")
         @RequestParam(defaultValue = "10") int pageSize,
         @Parameter(description = "Search by name, email, phone, or identity number")
-        @RequestParam(required = false) String search
+        @RequestParam(required = false) String search,
+        @Parameter(description = "Filter by department ID")
+        @RequestParam(required = false) String departmentId
     ) {
         try {
-            PaginatedResponse<DoctorDTO> response = doctorManagementService.getDoctors(pageNumber, pageSize, search);
+            PaginatedResponse<DoctorDTO> response = doctorManagementService.getDoctors(pageNumber, pageSize, search, departmentId);
             return ResponseEntity.ok(new ApiResponse<>(200, "Successfully retrieved doctors", response));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to get doctors", null));
