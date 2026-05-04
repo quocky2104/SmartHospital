@@ -7,16 +7,20 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
+import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.model.EmergencyContact;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.PatientRepository;
+import com.example.SmartHospital.repository.UserRepository;
 import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 public class PatientManagementService {
     private final PatientRepository patientRepository;
     private final MinioStorageService minioStorageService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // Paginated retrieval of patients with optional search
     public PaginatedResponse<PatientDTO> getPatients(int pageNumber, int pageSize, String search) {
@@ -67,6 +73,100 @@ public class PatientManagementService {
         if (patient == null || patient.getStatus() == UserStatus.DELETED) {
             return null;
         }
+        return convertToPatientDTO(patient);
+    }
+
+    public PatientDTO createPatient(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new IllegalArgumentException("Phone number already exists");
+        }
+        if (userRepository.existsByIdentityNumber(request.getIdentityNumber())) {
+            throw new IllegalArgumentException("Identity number already exists");
+        }
+
+        Patient patient = new Patient();
+        patient.setFirstName(request.getFirstName());
+        patient.setLastName(request.getLastName());
+        patient.setFullName(request.getFirstName() + " " + request.getLastName());
+        patient.setEmail(request.getEmail());
+        patient.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+        patient.setPhoneNumber(request.getPhoneNumber());
+        patient.setIdentityNumber(request.getIdentityNumber());
+        patient.setAddress(request.getAddress());
+        patient.setCity(request.getCity());
+        patient.setZipCode(null);
+        patient.setGender(request.getGender());
+        patient.setDateOfBirth(request.getDateOfBirth());
+        patient.setRole(RoleType.PATIENT);
+        patient.setStatus(UserStatus.ACTIVE);
+        patient.setInsuranceNumber(request.getInsuranceNumber());
+        patient.setInsuranceProvider(request.getInsuranceProvider());
+        patient.setAvatarPath(request.getAvatarPath());
+        if (request.getEmergencyContacts() != null && !request.getEmergencyContacts().isEmpty()) {
+            patient.setEmergencyContacts(
+                request.getEmergencyContacts().stream()
+                    .map(ec -> new EmergencyContact(ec.getPhoneNumber(), ec.getRelationship()))
+                    .collect(Collectors.toList())
+            );
+        }
+        patientRepository.save(patient);
+        return convertToPatientDTO(patient);
+    }
+
+    public PatientDTO editPatientByAdmin(String patientId, PatientEditProfileRequest request) {
+        Patient patient = patientRepository.findById(patientId).orElse(null);
+        if (patient == null || patient.getStatus() == UserStatus.DELETED) {
+            return null;
+        }
+
+        if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(patient.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+            patient.setEmail(request.getEmail());
+        }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(patient.getPhoneNumber())) {
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalArgumentException("Phone number already exists");
+            }
+            patient.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getIdentityNumber() != null && !request.getIdentityNumber().equals(patient.getIdentityNumber())) {
+            if (userRepository.existsByIdentityNumber(request.getIdentityNumber())) {
+                throw new IllegalArgumentException("Identity number already exists");
+            }
+            patient.setIdentityNumber(request.getIdentityNumber());
+        }
+
+        if (request.getFirstName() != null) patient.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) patient.setLastName(request.getLastName());
+        if (request.getFirstName() != null || request.getLastName() != null) {
+            String fullName = ((patient.getFirstName() == null ? "" : patient.getFirstName()) + " " + (patient.getLastName() == null ? "" : patient.getLastName())).trim();
+            patient.setFullName(fullName);
+        }
+        if (request.getGender() != null) patient.setGender(request.getGender());
+        if (request.getDateOfBirth() != null) patient.setDateOfBirth(request.getDateOfBirth());
+        if (request.getAddress() != null) patient.setAddress(request.getAddress());
+        if (request.getCity() != null) patient.setCity(request.getCity());
+        if (request.getZipCode() != null) patient.setZipCode(request.getZipCode());
+        if (request.getStatus() != null) patient.setStatus(request.getStatus());
+        if (request.getInsuranceNumber() != null) patient.setInsuranceNumber(request.getInsuranceNumber());
+        if (request.getInsuranceId() != null) patient.setInsuranceId(request.getInsuranceId());
+        if (request.getInsuranceProvider() != null) patient.setInsuranceProvider(request.getInsuranceProvider());
+        if (request.getBloodType() != null) patient.setBloodType(request.getBloodType());
+
+        if (request.getEmergencyContacts() != null) {
+            patient.setEmergencyContacts(
+                request.getEmergencyContacts().stream()
+                    .map(ec -> new EmergencyContact(ec.getPhoneNumber(), ec.getRelationship()))
+                    .collect(Collectors.toList())
+            );
+        }
+
+        patientRepository.save(patient);
         return convertToPatientDTO(patient);
     }
 

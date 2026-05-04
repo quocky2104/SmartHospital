@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
+import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
@@ -77,6 +79,46 @@ public class PatientController {
             removeAdditionalFiles
         );
         return ResponseEntity.ok(new ApiResponse<>(200, "Successfully edited patient profile", response));
+    }
+
+    @Operation(
+        summary = "Create a new patient",
+        description = "Create a patient account as an admin"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/admin/patients/create")
+    public ResponseEntity<ApiResponse<PatientDTO>> createPatient(@org.springframework.web.bind.annotation.RequestBody RegisterRequest request) {
+        try {
+            PatientDTO response = patientManagementService.createPatient(request);
+            return ResponseEntity.status(201).body(new ApiResponse<>(201, "Patient created successfully", response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(500, "Failed to create patient", null));
+        }
+    }
+
+    @Operation(
+        summary = "Admin edit patient",
+        description = "Update patient profile information as an admin"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/admin/patients/{patientId}")
+    public ResponseEntity<ApiResponse<PatientDTO>> editPatientByAdmin(
+        @PathVariable String patientId,
+        @org.springframework.web.bind.annotation.RequestBody PatientEditProfileRequest request
+    ) {
+        try {
+            PatientDTO response = patientManagementService.editPatientByAdmin(patientId, request);
+            if (response == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(404, "Patient not found", null));
+            }
+            return ResponseEntity.ok(new ApiResponse<>(200, "Patient updated successfully", response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(500, "Failed to update patient", null));
+        }
     }
 
     @Operation(

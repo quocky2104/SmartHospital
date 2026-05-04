@@ -135,4 +135,27 @@ public class DoctorController {
             return ResponseEntity.internalServerError().body(new ApiResponse<>(500, "Failed to create doctor", null));
         }
     }
+
+    @Operation(
+        summary = "Admin edit doctor",
+        description = "Update doctor profile information as an admin"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/admin/doctors/{doctorId}")
+    public ResponseEntity<ApiResponse<DoctorDTO>> editDoctorByAdmin(
+        @PathVariable String doctorId,
+        @Valid @RequestBody DoctorEditProfileRequest request
+    ) {
+        try {
+            DoctorDTO response = doctorManagementService.editDoctorByAdmin(doctorId, request);
+            if (response == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(404, "Doctor not found", null));
+            }
+            return ResponseEntity.ok(new ApiResponse<>(200, "Doctor updated successfully", response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(500, "Failed to update doctor", null));
+        }
+    }
 }

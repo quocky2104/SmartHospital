@@ -50,13 +50,12 @@ public class DoctorManagementService {
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
         Page<Doctor> doctorPage;
         if (search != null && !search.trim().isEmpty()) {
-            doctorPage = doctorRepository.searchDoctors(search.trim(), pageable);
+            doctorPage = doctorRepository.searchDoctors(search.trim(), UserStatus.DELETED, pageable);
         } else {
-            doctorPage = doctorRepository.findAll(pageable);
+            doctorPage = doctorRepository.findByStatusNot(UserStatus.DELETED, pageable);
         }
 
         List<DoctorDTO> content = doctorPage.getContent().stream()
-            .filter(doctor -> doctor.getStatus() != UserStatus.DELETED)
             .map(this::convertToDoctorDTO)
             .toList();
 
@@ -110,6 +109,52 @@ public class DoctorManagementService {
         doctor.setRole(RoleType.DOCTOR);
         doctor.setStatus(UserStatus.ACTIVE);
         doctor.setDepartment(department);
+
+        doctorRepository.save(doctor);
+        return convertToDoctorDTO(doctor);
+    }
+
+    public DoctorDTO editDoctorByAdmin(String doctorId, DoctorEditProfileRequest request) {
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        if (doctor == null || doctor.getStatus() == UserStatus.DELETED) {
+            return null;
+        }
+
+        if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(doctor.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+            doctor.setEmail(request.getEmail());
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(doctor.getPhoneNumber())) {
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalArgumentException("Phone number already exists");
+            }
+            doctor.setPhoneNumber(request.getPhoneNumber());
+        }
+
+        if (request.getIdentityNumber() != null && !request.getIdentityNumber().equals(doctor.getIdentityNumber())) {
+            if (userRepository.existsByIdentityNumber(request.getIdentityNumber())) {
+                throw new IllegalArgumentException("Identity number already exists");
+            }
+            doctor.setIdentityNumber(request.getIdentityNumber());
+        }
+
+        if (request.getFullName() != null) doctor.setFullName(request.getFullName());
+        if (request.getAddress() != null) doctor.setAddress(request.getAddress());
+        if (request.getGender() != null) doctor.setGender(request.getGender());
+        if (request.getDateOfBirth() != null) doctor.setDateOfBirth(request.getDateOfBirth());
+        if (request.getWorkingHours() != null) doctor.setWorkingHours(request.getWorkingHours());
+        if (request.getAvailabilityStatus() != null) doctor.setAvailabilityStatus(request.getAvailabilityStatus());
+        if (request.getSpecialization() != null) doctor.setSpecialization(request.getSpecialization());
+        if (request.getStatus() != null) doctor.setStatus(request.getStatus());
+
+        if (request.getDepartmentId() != null && !request.getDepartmentId().isBlank()) {
+            Department department = departmentRepository.findById(request.getDepartmentId())
+                .orElseThrow(() -> new IllegalArgumentException("Department not found"));
+            doctor.setDepartment(department);
+        }
 
         doctorRepository.save(doctor);
         return convertToDoctorDTO(doctor);
