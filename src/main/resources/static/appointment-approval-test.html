@@ -294,6 +294,7 @@
 		let notificationFilter = "all";
 		let notificationItems = [];
 		let notificationPollId = null;
+		let appointmentRefreshTimer = null;
 
 		const today = new Date().toISOString().slice(0, 10);
 		rescheduleDateEl.min = today;
@@ -435,6 +436,16 @@
 				clearInterval(notificationPollId);
 				notificationPollId = null;
 			}
+		}
+
+		function scheduleAppointmentsRefresh(delayMs = 900) {
+			if (appointmentRefreshTimer) {
+				clearTimeout(appointmentRefreshTimer);
+			}
+			appointmentRefreshTimer = setTimeout(() => {
+				appointmentRefreshTimer = null;
+				loadAppointments().catch(() => {});
+			}, delayMs);
 		}
 
 		function toTimeWithSeconds(hhmm) {
@@ -730,8 +741,8 @@
 					setStatus('Connected to notifications', 'ok');
 					stompSub = stompClient.subscribe('/user/queue/appointments', function(message) {
 						refreshNotifications();
-						// also refresh appointments list when appointment-related notifications arrive
-						loadAppointments().catch(()=>{});
+						// The appointment row can become visible a moment after the notification is delivered.
+						scheduleAppointmentsRefresh();
 					});
 					refreshNotifications();
 					ensureNotificationPolling();

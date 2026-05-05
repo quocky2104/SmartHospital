@@ -736,7 +736,7 @@
                 latestAvailability.forEach((d) => {
                     const op = document.createElement("option");
                     op.value = d.id;
-                    op.textContent = (d.fullName || "Unknown") + " • " + (d.specialization || "N/A");
+                    op.textContent = (d.fullName || "Unknown");
                     doctorSelectEl.appendChild(op);
                 });
                 console.log("[DEBUG] Dropdown now has " + doctorSelectEl.options.length + " options");
@@ -817,7 +817,7 @@
                 card.style.display = 'flex';
                 card.style.justifyContent = 'space-between';
                 card.style.alignItems = 'center';
-                card.innerHTML = `<div><div style="font-weight:800">${d.fullName}</div><div style="font-size:13px; color:#597085;">${d.specialization || ''}</div></div>`;
+                card.innerHTML = `<div><div style="font-weight:800">${d.fullName}</div><div style="font-size:13px; color:#597085;">${d.departmentName || 'Department unavailable'}${d.id ? ' • ' + d.id : ''}</div></div>`;
                 const chooseBtn = document.createElement('button');
                 chooseBtn.className = 'btn primary';
                 chooseBtn.textContent = 'Select';

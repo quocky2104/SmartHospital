@@ -201,6 +201,7 @@ public class DoctorManagementService {
         dto.setId(doctor.getId());
         dto.setEmail(doctor.getEmail());
         dto.setFullName(doctor.getFullName());
+        dto.setDepartmentName(doctor.getDepartment() == null ? null : doctor.getDepartment().getName());
         dto.setPhoneNumber(doctor.getPhoneNumber());
         dto.setIdentityNumber(doctor.getIdentityNumber());
         dto.setGender(doctor.getGender());

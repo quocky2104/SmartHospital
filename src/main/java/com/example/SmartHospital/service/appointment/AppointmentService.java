@@ -178,11 +178,23 @@ public class AppointmentService {
             .toList();
 
         return availableDoctors.stream()
+                                .sorted((left, right) -> {
+                                    String leftName = left.getFullName() == null ? "" : left.getFullName();
+                                    String rightName = right.getFullName() == null ? "" : right.getFullName();
+                                    int nameCompare = leftName.compareToIgnoreCase(rightName);
+                                    if (nameCompare != 0) {
+                                        return nameCompare;
+                                    }
+                                    String leftId = left.getId() == null ? "" : left.getId();
+                                    String rightId = right.getId() == null ? "" : right.getId();
+                                    return leftId.compareToIgnoreCase(rightId);
+                                })
                                 .filter(d -> isWithinWorkingHours(d.getWorkingHours(), start, end)) // Filter by working hours
                                 .map(d -> {
                                     DoctorDTO dto = new DoctorDTO();
                                     dto.setId(d.getId());
                                     dto.setFullName(d.getFullName());
+                                    dto.setDepartmentName(d.getDepartment() == null ? null : d.getDepartment().getName());
                                     dto.setEmail(d.getEmail());
                                     dto.setWorkingHours(d.getWorkingHours());
                                     dto.setAvailabilityStatus(d.getAvailabilityStatus());
