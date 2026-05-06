@@ -6,7 +6,9 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AcceptAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentRequest;
@@ -96,7 +98,14 @@ public class AppointmentService {
         appointment.setCancelReason(request.getCancelReason());
 
         Appointment saved = appointmentRepository.save(appointment);
-        if (!saved.getDoctor().getId().equals(actorUserId)) {
+        boolean cancelledByDoctor = saved.getDoctor().getId().equals(actorUserId);
+        if (cancelledByDoctor) {
+            notificationService.notifyPatientAppointmentEvent(
+                saved,
+                "APPOINTMENT_CANCELLED",
+                "Your appointment was cancelled: " + (request.getCancelReason() == null ? "No reason provided" : request.getCancelReason())
+            );
+        } else {
             notificationService.notifyDoctorAppointmentEvent(
                 saved,
                 "APPOINTMENT_CANCELLED",
@@ -116,8 +125,14 @@ public class AppointmentService {
         }
 
         appointment.setStatus(AppointmentStatus.SCHEDULED);
+        Appointment saved = appointmentRepository.save(appointment);
+        notificationService.notifyPatientAppointmentEvent(
+            saved,
+            "APPOINTMENT_ACCEPTED",
+            "Your appointment was accepted and scheduled for " + saved.getAppointmentDateTime()
+        );
 
-        return new AppointmentResponse(appointmentRepository.save(appointment));
+        return new AppointmentResponse(saved);
     }
 
     public AppointmentResponse rescheduleAppointment(RescheduleAppointmentRequest request, String actorUserId) {
@@ -136,7 +151,14 @@ public class AppointmentService {
         }
 
         Appointment saved = appointmentRepository.save(appointment);
-        if (!saved.getDoctor().getId().equals(actorUserId)) {
+        boolean rescheduledByDoctor = saved.getDoctor().getId().equals(actorUserId);
+        if (rescheduledByDoctor) {
+            notificationService.notifyPatientAppointmentEvent(
+                saved,
+                "APPOINTMENT_RESCHEDULED",
+                "Your appointment was rescheduled to " + saved.getAppointmentDateTime()
+            );
+        } else {
             notificationService.notifyDoctorAppointmentEvent(
                 saved,
                 "APPOINTMENT_RESCHEDULED",
@@ -144,6 +166,25 @@ public class AppointmentService {
             );
         }
         return new AppointmentResponse(saved);
+    }
+
+    @Scheduled(fixedDelayString = "${app.appointments.auto-cancel-check-ms:60000}")
+    @Transactional
+    public void autoCancelExpiredPendingAppointments() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Appointment> expiredPendingAppointments = appointmentRepository
+            .findByStatusAndAppointmentDateTimeBeforeOrderByAppointmentDateTimeAsc(AppointmentStatus.PENDING, now);
+
+        for (Appointment appointment : expiredPendingAppointments) {
+            appointment.setStatus(AppointmentStatus.CANCELLED);
+            appointment.setCancelReason("Automatically cancelled because the appointment time passed before acceptance.");
+            Appointment saved = appointmentRepository.save(appointment);
+            notificationService.notifyPatientAppointmentEvent(
+                saved,
+                "APPOINTMENT_AUTO_CANCELLED",
+                "Your appointment expired and was automatically cancelled because no action was taken before the scheduled time."
+            );
+        }
     }
 
         public List<DoctorDTO> findAvailableDoctors(

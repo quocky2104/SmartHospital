@@ -66,6 +66,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     """)
     List<Doctor> findAvailableDoctors(@Param("busyIds") List<String> busyIds);
 
+    List<Appointment> findByStatusAndAppointmentDateTimeBeforeOrderByAppointmentDateTimeAsc(
+        AppointmentStatus status,
+        LocalDateTime appointmentDateTime
+    );
+
     long countByAppointmentDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
     long countByAppointmentDateTimeBetweenAndStatus(LocalDateTime start, LocalDateTime end, AppointmentStatus status);

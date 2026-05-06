@@ -26,26 +26,26 @@ public class NotificationService {
     private final INotificationSender notificationSender;
     private final ObjectProvider<RabbitTemplate> rabbitTemplateProvider;
 
-    @Transactional
-    public void notifyDoctorAppointmentEvent(Appointment appointment, String eventType, String message) {
-        String doctorId = appointment.getDoctor().getId();
-        String patientId = appointment.getPatient().getId();
-        String patientName = appointment.getPatient().getFullName();
-        String doctorName = appointment.getDoctor().getFullName();
-        String doctorEmail = appointment.getDoctor().getEmail();
-
+    private void sendAppointmentEvent(
+        String recipientUserId,
+        String recipientEmail,
+        String recipientName,
+        Appointment appointment,
+        String eventType,
+        String message
+    ) {
         AppointmentNotificationPayload payload = new AppointmentNotificationPayload(
             eventType,
             appointment.getId(),
-            patientId,
-            patientName,
-            doctorId,
+            appointment.getPatient().getId(),
+            appointment.getPatient().getFullName(),
+            appointment.getDoctor().getId(),
             appointment.getAppointmentDateTime(),
             message
         );
 
         Notification notification = new Notification();
-        notification.setRecipientUserId(doctorId);
+        notification.setRecipientUserId(recipientUserId);
         notification.setType(eventType);
         notification.setTitle("Appointment update");
         notification.setMessage(message);
@@ -53,8 +53,34 @@ public class NotificationService {
         notification.setIsRead(false);
         notificationRepository.save(notification);
 
-        notificationSender.sendAppointmentNotification(doctorId, doctorEmail, doctorName, payload);
-        publishRabbitIfAvailable(doctorId, payload);
+        notificationSender.sendAppointmentNotification(recipientUserId, recipientEmail, recipientName, payload);
+    }
+
+    @Transactional
+    public void notifyDoctorAppointmentEvent(Appointment appointment, String eventType, String message) {
+        String doctorId = appointment.getDoctor().getId();
+        sendAppointmentEvent(
+            doctorId,
+            appointment.getDoctor().getEmail(),
+            appointment.getDoctor().getFullName(),
+            appointment,
+            eventType,
+            message
+        );
+        publishRabbitIfAvailable(doctorId, buildPayload(appointment, eventType, message));
+    }
+
+    @Transactional
+    public void notifyPatientAppointmentEvent(Appointment appointment, String eventType, String message) {
+        String patientId = appointment.getPatient().getId();
+        sendAppointmentEvent(
+            patientId,
+            appointment.getPatient().getEmail(),
+            appointment.getPatient().getFullName(),
+            appointment,
+            eventType,
+            message
+        );
     }
 
     public List<NotificationResponse> getMyNotifications(String userId) {
@@ -94,6 +120,18 @@ public class NotificationService {
 
     public long getUnreadCount(String userId) {
         return notificationRepository.countByRecipientUserIdAndIsReadFalse(userId);
+    }
+
+    private AppointmentNotificationPayload buildPayload(Appointment appointment, String eventType, String message) {
+        return new AppointmentNotificationPayload(
+            eventType,
+            appointment.getId(),
+            appointment.getPatient().getId(),
+            appointment.getPatient().getFullName(),
+            appointment.getDoctor().getId(),
+            appointment.getAppointmentDateTime(),
+            message
+        );
     }
 
     private void publishRabbitIfAvailable(String doctorId, AppointmentNotificationPayload payload) {
