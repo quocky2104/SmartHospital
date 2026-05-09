@@ -52,6 +52,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/auth/**",
+                    "/social-posts/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/chat-test.html", // remove this in production, only for testing

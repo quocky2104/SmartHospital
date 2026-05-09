@@ -30,6 +30,7 @@ import com.example.SmartHospital.dtos.AppointmentDtos.Request.RescheduleAppointm
 import com.example.SmartHospital.dtos.AppointmentDtos.Response.Response.AppointmentResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.UserDtos.DoctorDTO;
+import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.service.appointment.AppointmentService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AppointmentController {
     private final AppointmentService appointmentService;
+    private final PatientRepository patientRepository;
 
     @Operation(
         summary = "Get patient's appointments",
@@ -112,6 +114,11 @@ public class AppointmentController {
         @RequestBody AppointmentRequest request,
         @AuthenticationPrincipal String userId
     ) {
+        if (userId == null || !patientRepository.existsById(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ApiResponse<>(403, "Only patients can create appointments", null));
+        }
+
         try {
             AppointmentResponse response = appointmentService.createAppointment(request, userId);
             return ResponseEntity.ok(

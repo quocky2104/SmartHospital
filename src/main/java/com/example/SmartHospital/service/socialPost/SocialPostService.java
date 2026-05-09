@@ -1,17 +1,21 @@
 package com.example.SmartHospital.service.socialPost;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import lombok.RequiredArgsConstructor;
-import com.example.SmartHospital.repository.SocialPostRepository;
+
 import com.example.SmartHospital.dtos.SocialDtos.Request.SocialPostRequest;
 import com.example.SmartHospital.model.SocialPost;
-import java.util.List;
 import com.example.SmartHospital.model.User;
+import com.example.SmartHospital.repository.SocialPostRepository;
 import com.example.SmartHospital.repository.UserRepository;
 import com.example.SmartHospital.service.storage.MinioStorageService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -42,14 +46,14 @@ public class SocialPostService {
                 .orElseThrow(() -> new RuntimeException("Post not found"));
     }
 
-    public List<SocialPost> getAllPosts(int pageNumber, int pageSize, String search, String sortBy) {
+    public Page<SocialPost> getAllPosts(int pageNumber, int pageSize, String search, String sortBy) {
         Sort.Direction direction = "newest".equalsIgnoreCase(sortBy) ? Sort.Direction.DESC : Sort.Direction.ASC;
         PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(direction, "createdAt"));
-        
+
         if (search != null && !search.isEmpty()) {
-            return socialPostRepository.searchByContent(search, pageRequest).getContent();
+            return socialPostRepository.searchByContent(search, pageRequest);
         }
-        return socialPostRepository.findAll(pageRequest).getContent();
+        return socialPostRepository.findAll(pageRequest);
     }
 
     public List<SocialPost> getAllPosts() {

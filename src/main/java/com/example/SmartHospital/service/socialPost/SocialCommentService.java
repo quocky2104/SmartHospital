@@ -1,17 +1,19 @@
 package com.example.SmartHospital.service.socialPost;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import lombok.RequiredArgsConstructor;
-import com.example.SmartHospital.repository.SocialPostRepository;
-import com.example.SmartHospital.repository.SocialCommentRepository;
-import com.example.SmartHospital.model.User;
+
+import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.model.SocialComment;
 import com.example.SmartHospital.model.SocialPost;
+import com.example.SmartHospital.model.User;
+import com.example.SmartHospital.repository.SocialCommentRepository;
+import com.example.SmartHospital.repository.SocialPostRepository;
 import com.example.SmartHospital.repository.UserRepository;
-import com.example.SmartHospital.enums.RoleType;
-import java.util.List;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -33,14 +35,14 @@ public class SocialCommentService {
         return socialCommentRepository.save(comment);
     }
 
-    public List<SocialComment> getCommentsForPost(String postId, int pageNumber, int pageSize, String sortBy) {
+    public Page<SocialComment> getCommentsForPost(String postId, int pageNumber, int pageSize, String sortBy) {
         SocialPost post = socialPostRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
         
         Sort.Direction direction = "newest".equalsIgnoreCase(sortBy) ? Sort.Direction.DESC : Sort.Direction.ASC;
         PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(direction, "createdAt"));
         
-        return socialCommentRepository.findByPostId(post, pageRequest).getContent();
+        return socialCommentRepository.findByPostId(post, pageRequest);
     }
 
     public void deleteComment(String userId, String commentId) {
