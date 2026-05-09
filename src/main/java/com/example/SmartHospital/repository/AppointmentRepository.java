@@ -74,4 +74,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     long countByAppointmentDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
     long countByAppointmentDateTimeBetweenAndStatus(LocalDateTime start, LocalDateTime end, AppointmentStatus status);
+
+    @Query("""
+        SELECT a FROM Appointment a
+        WHERE a.doctor = :doctor
+            AND a.appointmentDateTime >= :start
+            AND a.appointmentDateTime < :end
+            AND a.status IN :statuses
+    """)
+    List<Appointment> findByDoctorAndAppointmentDateTimeBetweenAndStatus(
+        @Param("doctor") Doctor doctor,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("statuses") List<AppointmentStatus> statuses
+    );
 }

@@ -69,6 +69,10 @@ public class CustomIdGenerator {
         return "ISS-" + randomShortUUID();
     }
 
+    public static String generatePostId() {
+        return "SP-" + randomShortUUID();
+    }
+
     // Generate a random short UUID
     private static String randomShortUUID() {
         return UUID.randomUUID().toString().split("-")[0].toUpperCase();

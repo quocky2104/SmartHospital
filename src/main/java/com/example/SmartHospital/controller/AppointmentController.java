@@ -2,7 +2,9 @@ package com.example.SmartHospital.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -121,6 +124,19 @@ public class AppointmentController {
     }
 
     @Operation(
+        summary = "Get doctors available for booking",
+        description = "Retrieve a patient-safe list of active doctors, optionally filtered by department"
+    )
+    @PreAuthorize("hasRole('PATIENT')")
+    @GetMapping("/booking-doctors")
+    public ResponseEntity<ApiResponse<List<DoctorDTO>>> getBookingDoctors(
+        @RequestParam(required = false) String departmentId
+    ) {
+        List<DoctorDTO> doctors = appointmentService.getBookingDoctors(departmentId);
+        return ResponseEntity.ok(new ApiResponse<>(200, "Doctors retrieved successfully", doctors));
+    }
+
+    @Operation(
         summary = "Cancel an appointment",
         description = "Cancel an existing appointment. Both patient and doctor can cancel with an optional cancellation reason"
     )
@@ -161,6 +177,114 @@ public class AppointmentController {
     }
 
     @Operation(
+        summary = "Cancel appointment by id (path)",
+        description = "Cancel appointment using path id and optional reason in body { reason: '...' }"
+    )
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
+    @PostMapping("/cancel/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> cancelById(
+        @PathVariable("id") String id,
+        @RequestBody(required = false) Map<String, String> body,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            CancelAppointmentRequest req = new CancelAppointmentRequest();
+            req.setAppointmentId(id);
+            if (body != null) {
+                req.setCancelReason(body.getOrDefault("reason", body.get("cancelReason")));
+            }
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment cancelled successfully", appointmentService.cancelAppointment(req, userId))
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to cancel appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Reschedule appointment by id (path)",
+        description = "Reschedule appointment using path id and body { appointmentDate: 'yyyy-MM-dd', appointmentTime: 'HH:mm', reason: '...'}"
+    )
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
+    @PostMapping("/reschedule/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> rescheduleById(
+        @PathVariable("id") String id,
+        @RequestBody Map<String, String> body,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            RescheduleAppointmentRequest req = new RescheduleAppointmentRequest();
+            req.setAppointmentId(id);
+            if (body != null) {
+                String dateStr = body.getOrDefault("appointmentDate", body.get("newAppointmentDate"));
+                String timeStr = body.getOrDefault("appointmentTime", body.get("newAppointmentTime"));
+                if (dateStr != null) req.setNewAppointmentDate(LocalDate.parse(dateStr));
+                if (timeStr != null) {
+                    // accept HH:mm or HH:mm:ss
+                    if (timeStr.length() == 5) timeStr = timeStr + ":00";
+                    req.setNewAppointmentTime(LocalTime.parse(timeStr));
+                }
+                req.setReason(body.get("reason"));
+            }
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment rescheduled successfully", appointmentService.rescheduleAppointment(req, userId))
+            );
+        } catch (DateTimeParseException dtpe) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, "Invalid date/time format: " + dtpe.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to reschedule appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Accept appointment by id (path)",
+        description = "Doctor accepts a pending appointment via path id"
+    )
+    @PreAuthorize("hasRole('DOCTOR')")
+    @PostMapping("/accept/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> acceptById(@PathVariable("id") String id) {
+        try {
+            AcceptAppointmentRequest req = new AcceptAppointmentRequest();
+            req.setAppointmentId(id);
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment accepted successfully", appointmentService.acceptAppointment(req))
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to accept appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Decline (cancel) appointment by id (path)",
+        description = "Doctor declines an appointment; treated as cancel with optional reason"
+    )
+    @PreAuthorize("hasRole('DOCTOR')")
+    @PostMapping("/decline/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> declineById(
+        @PathVariable("id") String id,
+        @RequestBody(required = false) Map<String, String> body,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            CancelAppointmentRequest req = new CancelAppointmentRequest();
+            req.setAppointmentId(id);
+            if (body != null) {
+                req.setCancelReason(body.getOrDefault("reason", body.get("cancelReason")));
+            }
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment declined successfully", appointmentService.cancelAppointment(req, userId))
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to decline appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
         summary = "Accept a pending appointment",
         description = "Doctor accepts a pending appointment request to confirm their availability"
     )
@@ -193,5 +317,20 @@ public class AppointmentController {
         @RequestParam(required = false) String departmentId ) {
             List<DoctorDTO> doctors = appointmentService.findAvailableDoctors(date, time, departmentId); 
             return ResponseEntity.ok(new ApiResponse<>(200, "Available doctors retrieved", doctors)); 
+    }
+
+    @Operation(
+        summary = "Get available timeslots for a doctor",
+        description = "Retrieve list of available time slots for a specific doctor on a given date"
+    )
+    @GetMapping("/available-timeslots")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<ApiResponse<List<String>>> getAvailableTimeslots(
+        @RequestParam String doctorId,
+        @Schema(description = "Date of the appointment", example = "2026-04-26", format = "date")
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @RequestParam LocalDate date) {
+        List<String> slots = appointmentService.findAvailableTimeslots(doctorId, date);
+        return ResponseEntity.ok(new ApiResponse<>(200, "Available timeslots retrieved", slots));
     }
 }

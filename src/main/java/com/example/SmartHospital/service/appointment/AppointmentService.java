@@ -17,6 +17,7 @@ import com.example.SmartHospital.dtos.AppointmentDtos.Request.RescheduleAppointm
 import com.example.SmartHospital.dtos.AppointmentDtos.Response.Response.AppointmentResponse;
 import com.example.SmartHospital.dtos.UserDtos.DoctorDTO;
 import com.example.SmartHospital.enums.AppointmentStatus;
+import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.model.Appointment;
 import com.example.SmartHospital.model.Doctor;
 import com.example.SmartHospital.model.Patient;
@@ -168,6 +169,7 @@ public class AppointmentService {
         return new AppointmentResponse(saved);
     }
 
+    // Scheduled task to auto-cancel expired pending appointments every minute (configurable)
     @Scheduled(fixedDelayString = "${app.appointments.auto-cancel-check-ms:60000}")
     @Transactional
     public void autoCancelExpiredPendingAppointments() {
@@ -183,6 +185,11 @@ public class AppointmentService {
                 saved,
                 "APPOINTMENT_AUTO_CANCELLED",
                 "Your appointment expired and was automatically cancelled because no action was taken before the scheduled time."
+            );
+            notificationService.notifyDoctorAppointmentEvent(
+                saved,
+                "APPOINTMENT_AUTO_CANCELLED",
+                "Appointment automatically cancelled because it passed without acceptance."
             );
         }
     }
@@ -243,6 +250,92 @@ public class AppointmentService {
                                     return dto;
                                 })
                                 .toList();
+    }
+
+    /**
+     * Get available timeslots for a specific doctor on a given date.
+     * Returns 30-minute slots from working hours, excluding booked times.
+     */
+    public List<String> findAvailableTimeslots(String doctorId, LocalDate date) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+            .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+        String workingHours = doctor.getWorkingHours();
+        if (workingHours == null || workingHours.isBlank()) {
+            return List.of(); // No working hours defined
+        }
+
+        List<String> slots = new java.util.ArrayList<>();
+        
+        // Parse working hours (e.g., "07:00-20:00")
+        String[] ranges = workingHours.split(",");
+        for (String range : ranges) {
+            range = range.trim();
+            String[] parts = range.split("-");
+            if (parts.length != 2) continue;
+
+            try {
+                LocalTime startHour = LocalTime.parse(parts[0].trim());
+                LocalTime endHour = LocalTime.parse(parts[1].trim());
+
+                // Generate 30-minute slots
+                LocalTime current = startHour;
+                while (current.isBefore(endHour)) {
+                    LocalDateTime slotDateTime = LocalDateTime.of(date, current);
+                    LocalDateTime slotEnd = slotDateTime.plusMinutes(30);
+
+                    // Check if slot is booked
+                    List<Appointment> bookings = appointmentRepository.findByDoctorAndAppointmentDateTimeBetweenAndStatus(
+                        doctor,
+                        slotDateTime,
+                        slotEnd,
+                        List.of(AppointmentStatus.SCHEDULED, AppointmentStatus.PENDING)
+                    );
+
+                    if (bookings.isEmpty()) {
+                        slots.add(String.format("%02d:%02d", current.getHour(), current.getMinute()));
+                    }
+
+                    current = current.plusMinutes(30);
+                }
+            } catch (Exception e) {
+                // Skip invalid time formats
+            }
+        }
+
+        return slots;
+    }
+
+    public List<DoctorDTO> getBookingDoctors(String departmentId) {
+        return doctorRepository.findAll().stream()
+            .filter(d -> d.getStatus() != UserStatus.DELETED)
+            .filter(d -> d.getDepartment() != null)
+            .filter(d -> !Boolean.TRUE.equals(d.getDepartment().getIsDeleted()))
+            .filter(d -> departmentId == null || departmentId.isBlank() || departmentId.equals(d.getDepartment().getId()))
+            .filter(d -> !"Emergency".equalsIgnoreCase(d.getDepartment().getName()))
+            .sorted((left, right) -> {
+                String leftName = left.getFullName() == null ? "" : left.getFullName();
+                String rightName = right.getFullName() == null ? "" : right.getFullName();
+                int nameCompare = leftName.compareToIgnoreCase(rightName);
+                if (nameCompare != 0) {
+                    return nameCompare;
+                }
+                String leftId = left.getId() == null ? "" : left.getId();
+                String rightId = right.getId() == null ? "" : right.getId();
+                return leftId.compareToIgnoreCase(rightId);
+            })
+            .map(d -> {
+                DoctorDTO dto = new DoctorDTO();
+                dto.setId(d.getId());
+                dto.setFullName(d.getFullName());
+                dto.setDepartmentName(d.getDepartment() == null ? null : d.getDepartment().getName());
+                dto.setEmail(d.getEmail());
+                dto.setWorkingHours(d.getWorkingHours());
+                dto.setAvailabilityStatus(d.getAvailabilityStatus());
+                dto.setDepartmentId(d.getDepartment() == null ? null : d.getDepartment().getId());
+                return dto;
+            })
+            .toList();
     }
 
     // Utility method to check if a time is within working hours

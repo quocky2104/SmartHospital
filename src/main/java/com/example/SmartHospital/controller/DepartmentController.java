@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 public class DepartmentController {
     private final DepartmentRepository departmentRepository;
 
+    @PreAuthorize("isAuthenticated()") // Allow any authenticated user (patients included) to view departments
     @GetMapping
     public ResponseEntity<ApiResponse<List<DepartmentDto>>> listDepartments() {
         List<DepartmentDto> list = departmentRepository.findAllByIsDeletedFalse()

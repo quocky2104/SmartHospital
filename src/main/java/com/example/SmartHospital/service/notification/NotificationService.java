@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.SmartHospital.config.RabbitMQConfig;
 import com.example.SmartHospital.dtos.NotificationDtos.AppointmentNotificationPayload;
+import com.example.SmartHospital.dtos.NotificationDtos.EmailNotificationPayload;
 import com.example.SmartHospital.dtos.NotificationDtos.NotificationResponse;
 import com.example.SmartHospital.model.Appointment;
 import com.example.SmartHospital.model.Notification;
@@ -67,7 +68,8 @@ public class NotificationService {
             eventType,
             message
         );
-        publishRabbitIfAvailable(doctorId, buildPayload(appointment, eventType, message));
+        publishRabbitIfAvailable("doctor", doctorId, buildPayload(appointment, eventType, message));
+        queueEmailNotification(appointment.getDoctor().getEmail(), "Appointment Update", message);
     }
 
     @Transactional
@@ -81,6 +83,21 @@ public class NotificationService {
             eventType,
             message
         );
+        publishRabbitIfAvailable("patient", patientId, buildPayload(appointment, eventType, message));
+        queueEmailNotification(appointment.getPatient().getEmail(), "Appointment Update", message);
+    }
+
+    private void queueEmailNotification(String recipientEmail, String subject, String message) {
+        RabbitTemplate rabbitTemplate = rabbitTemplateProvider.getIfAvailable();
+        if (rabbitTemplate == null) {
+            return;
+        }
+        try {
+            EmailNotificationPayload emailPayload = new EmailNotificationPayload(recipientEmail, subject, message);
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EMAIL_EXCHANGE, RabbitMQConfig.EMAIL_ROUTING_KEY_PATTERN, emailPayload);
+        } catch (AmqpException ex) {
+            log.warn("Failed to queue email to RabbitMQ: {}", ex.getMessage());
+        }
     }
 
     public List<NotificationResponse> getMyNotifications(String userId) {
@@ -134,13 +151,13 @@ public class NotificationService {
         );
     }
 
-    private void publishRabbitIfAvailable(String doctorId, AppointmentNotificationPayload payload) {
+    private void publishRabbitIfAvailable(String rolePrefix, String userId, AppointmentNotificationPayload payload) {
         RabbitTemplate rabbitTemplate = rabbitTemplateProvider.getIfAvailable();
         if (rabbitTemplate == null) {
             return;
         }
         try {
-            rabbitTemplate.convertAndSend(RabbitMQConfig.APPOINTMENT_EXCHANGE, "doctor." + doctorId, payload);
+            rabbitTemplate.convertAndSend(RabbitMQConfig.APPOINTMENT_EXCHANGE, rolePrefix + "." + userId, payload);
         } catch (AmqpException ex) {
             log.warn("RabbitMQ not available, websocket delivery still succeeded: {}", ex.getMessage());
         }
