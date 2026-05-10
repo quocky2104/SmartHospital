@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.SmartHospital.config.exceptions.ConflictException;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AcceptAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.CancelAppointmentRequest;
@@ -63,6 +64,12 @@ public class AppointmentService {
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
 
         validateAppointmentSlot(request.getAppointmentDate(), request.getAppointmentTime(), doctor);
+        validatePatientTimeslotConflict(
+            patient.getId(),
+            request.getAppointmentDate(),
+            request.getAppointmentTime(),
+            null
+        );
 
         Appointment appointment = new Appointment();
         appointment.setAppointmentDateTime(
@@ -145,6 +152,12 @@ public class AppointmentService {
         }
 
         validateAppointmentSlot(request.getNewAppointmentDate(), request.getNewAppointmentTime(), appointment.getDoctor());
+        validatePatientTimeslotConflict(
+            appointment.getPatient().getId(),
+            request.getNewAppointmentDate(),
+            request.getNewAppointmentTime(),
+            appointment.getId()
+        );
 
         appointment.setAppointmentDateTime(LocalDateTime.of(request.getNewAppointmentDate(), request.getNewAppointmentTime()));
         if (request.getReason() != null && !request.getReason().isBlank()) {
@@ -393,6 +406,26 @@ public class AppointmentService {
         }
         if (!(time.getMinute() == 0 || time.getMinute() == 30) || time.getSecond() != 0 || time.getNano() != 0) {
             throw new IllegalArgumentException("Timeslot must be on 30-minute boundaries using HH:mm:ss format");
+        }
+    }
+
+    private void validatePatientTimeslotConflict(String patientId, LocalDate date, LocalTime time, String excludeAppointmentId) {
+        LocalDateTime start = LocalDateTime.of(date, time);
+        LocalDateTime end = start.plusMinutes(30);
+        List<AppointmentStatus> blockingStatuses = List.of(AppointmentStatus.SCHEDULED, AppointmentStatus.PENDING);
+
+        boolean hasConflict = excludeAppointmentId == null
+            ? appointmentRepository.existsPatientConflictAtTimeslot(patientId, start, end, blockingStatuses)
+            : appointmentRepository.existsPatientConflictAtTimeslotExcludingAppointment(
+                patientId,
+                excludeAppointmentId,
+                start,
+                end,
+                blockingStatuses
+            );
+
+        if (hasConflict) {
+            throw new ConflictException("You already have an appointment at this timeslot. Please choose a different time.");
         }
     }
 

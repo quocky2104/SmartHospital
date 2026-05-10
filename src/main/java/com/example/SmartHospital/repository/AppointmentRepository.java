@@ -89,5 +89,35 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
         @Param("statuses") List<AppointmentStatus> statuses
     );
 
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Appointment a
+        WHERE a.patient.id = :patientId
+          AND a.appointmentDateTime >= :start
+          AND a.appointmentDateTime < :end
+          AND a.status IN :statuses
+    """)
+    boolean existsPatientConflictAtTimeslot(
+        @Param("patientId") String patientId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("statuses") List<AppointmentStatus> statuses
+    );
+
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Appointment a
+        WHERE a.patient.id = :patientId
+          AND a.id <> :appointmentId
+          AND a.appointmentDateTime >= :start
+          AND a.appointmentDateTime < :end
+          AND a.status IN :statuses
+    """)
+    boolean existsPatientConflictAtTimeslotExcludingAppointment(
+        @Param("patientId") String patientId,
+        @Param("appointmentId") String appointmentId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("statuses") List<AppointmentStatus> statuses
+    );
+
     boolean existsByPatient_IdAndDoctor_Id(String patientId, String doctorId);
 }

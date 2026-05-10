@@ -1,11 +1,12 @@
 package com.example.SmartHospital.helper;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import java.util.List;
+
 import com.example.SmartHospital.enums.GenderType;
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
@@ -73,7 +74,7 @@ public class DataInitializer implements CommandLineRunner{
                 doctor.setAddress("Doctor Address " + department.getName() + " " + i);
                 doctor.setHashedPassword(passwordEncoder.encode("Doctor123@"));
 
-                doctor.setWorkingHours("07:00-12:00,13:00-17:00");
+                doctor.setWorkingHours("07:00-12:00,13:00-18:00");
                 doctor.setAvailabilityStatus("AVAILABLE");
                 doctor.setDepartment(department);
 
