@@ -36,7 +36,7 @@ Create a `.env` file in the `backend` root directory with the following configur
 
 ```env
 SERVER_PORT=8080
-
+GEMINI_API_KEY=AIzaSyD8mHjrWkeXg3LCpTCa9tAUIpc6uvdnDcg
 # Mail
 MAIL_USERNAME=your_email@example.com
 MAIL_PASSWORD=your_app_specific_password
