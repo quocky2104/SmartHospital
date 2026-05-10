@@ -44,9 +44,10 @@ public class SocialPostController {
     public ResponseEntity<ApiResponse<SocialPost>> createPost(
         @AuthenticationPrincipal String userId,
         @RequestPart(required = false) SocialPostRequest request,
-        @RequestPart(required = false) List<MultipartFile> images
+        @RequestPart(required = false) List<MultipartFile> images,
+        @RequestPart(required = false) MultipartFile coverImageFile
     ) {
-        SocialPost createdPost = socialPostService.createPost(userId, request, images);
+        SocialPost createdPost = socialPostService.createPost(userId, request, images, coverImageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(201, "Social post created", createdPost));
     }
 
@@ -76,10 +77,16 @@ public class SocialPostController {
     }
 
     @Operation(summary = "Update social post", description = "Only Admins can update social posts.")
-    @PutMapping("/{postId}")
+    @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<SocialPost>> updatePost(@AuthenticationPrincipal String userId, @PathVariable String postId, @RequestBody SocialPostRequest request) {
-        SocialPost updatedPost = socialPostService.updatePost(postId, request);
+    public ResponseEntity<ApiResponse<SocialPost>> updatePost(
+        @AuthenticationPrincipal String userId, 
+        @PathVariable String postId, 
+        @RequestPart(required = false) SocialPostRequest request,
+        @RequestPart(required = false) List<MultipartFile> images,
+        @RequestPart(required = false) MultipartFile coverImageFile
+    ) {
+        SocialPost updatedPost = socialPostService.updatePost(postId, request, images, coverImageFile, userId);
         return ResponseEntity.ok(new ApiResponse<>(200, "Social post updated", updatedPost));
     }
 
@@ -97,6 +104,17 @@ public class SocialPostController {
     public ResponseEntity<ApiResponse<SocialPost>> getPostById(@PathVariable String postId) {
         SocialPost post = socialPostService.getPostById(postId);
         return ResponseEntity.ok(new ApiResponse<>(200, "Social post retrieved", post));
+    }
+
+    @Operation(summary = "Toggle like on a social post", description = "Authenticated users can like/unlike a post.")
+    @PostMapping("/{postId}/toggle-like")
+    @PreAuthorize("hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')")
+    public ResponseEntity<ApiResponse<SocialPost>> toggleLike(
+        @AuthenticationPrincipal String userId,
+        @PathVariable String postId
+    ) {
+        SocialPost post = socialPostService.toggleLike(postId, userId);
+        return ResponseEntity.ok(new ApiResponse<>(200, "Post like toggled", post));
     }
 
     @Operation(summary = "Add comment to social post", description = "Only authenticated users can comment on social posts.")
