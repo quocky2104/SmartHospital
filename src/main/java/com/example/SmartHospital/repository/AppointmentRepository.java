@@ -88,4 +88,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
         @Param("end") LocalDateTime end,
         @Param("statuses") List<AppointmentStatus> statuses
     );
+
+    boolean existsByPatient_IdAndDoctor_Id(String patientId, String doctorId);
 }
