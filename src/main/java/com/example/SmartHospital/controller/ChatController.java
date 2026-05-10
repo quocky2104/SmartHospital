@@ -88,6 +88,17 @@ public class ChatController {
         if (principal == null) {
             throw new IllegalArgumentException("User must be authenticated to send messages");
         }
+
+        if ((message.getReceiverId() == null || message.getReceiverId().isBlank())
+            && message.getRecipientId() != null
+            && !message.getRecipientId().isBlank()) {
+            message.setReceiverId(message.getRecipientId());
+        }
+
+        if (message.getReceiverId() == null || message.getReceiverId().isBlank()) {
+            throw new IllegalArgumentException("receiverId is required for sending messages");
+        }
+
         String senderId = principal.getName(); // userId from JWT claims will be used as Principal name
         UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) principal;
         chatService.createMessage(senderId, message, authentication);
@@ -109,9 +120,12 @@ public class ChatController {
         if (receiverValue == null) {
             receiverValue = request.get("receiverId");
         }
+        if (receiverValue == null) {
+            receiverValue = request.get("recipientId");
+        }
         String receiverId = receiverValue != null ? String.valueOf(receiverValue) : null;
         if (receiverId == null || receiverId.isBlank()) {
-            throw new IllegalArgumentException("otherUserId or receiverId is required for typing indicators");
+            throw new IllegalArgumentException("otherUserId, receiverId, or recipientId is required for typing indicators");
         }
 
         boolean isTyping = Boolean.parseBoolean(String.valueOf(request.getOrDefault("isTyping", false)));
