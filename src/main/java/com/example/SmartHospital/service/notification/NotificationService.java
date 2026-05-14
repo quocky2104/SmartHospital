@@ -120,9 +120,7 @@ public class NotificationService {
 
     @Transactional
     public void markAllAsRead(String userId) {
-        List<Notification> notifications = notificationRepository.findByRecipientUserIdAndIsReadFalse(userId);
-        notifications.forEach(notification -> notification.setIsRead(true));
-        notificationRepository.saveAll(notifications);
+        notificationRepository.markAllAsRead(userId);
     }
 
     @Transactional
@@ -136,7 +134,7 @@ public class NotificationService {
     }
 
     public long getUnreadCount(String userId) {
-        return notificationRepository.countByRecipientUserIdAndIsReadFalse(userId);
+        return notificationRepository.countUnread(userId);
     }
 
     private AppointmentNotificationPayload buildPayload(Appointment appointment, String eventType, String message) {

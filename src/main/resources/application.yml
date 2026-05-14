@@ -11,6 +11,8 @@ spring:
       - POST
       - PUT
       - DELETE
+      - PATCH
+      - OPTIONS
     allowed-headers:
       - "*"
     exposed-headers:

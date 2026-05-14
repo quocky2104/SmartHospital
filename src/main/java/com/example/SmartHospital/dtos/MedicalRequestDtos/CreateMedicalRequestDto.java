@@ -14,7 +14,4 @@ public class CreateMedicalRequestDto {
 
     @NotBlank
     private String description;
-
-    @NotBlank
-    private String priority;
 }

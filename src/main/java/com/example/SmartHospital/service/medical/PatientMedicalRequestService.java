@@ -12,7 +12,6 @@ import com.example.SmartHospital.dtos.MedicalRequestDtos.CreateMedicalRequestDto
 import com.example.SmartHospital.dtos.MedicalRequestDtos.MedicalRequestResponse;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.model.PatientMedicalRequest;
-import com.example.SmartHospital.model.User;
 import com.example.SmartHospital.repository.AppointmentRepository;
 import com.example.SmartHospital.repository.PatientMedicalRequestRepository;
 import com.example.SmartHospital.repository.PatientRepository;
@@ -38,7 +37,7 @@ public class PatientMedicalRequestService {
         entity.setRequestType(dto.getType());
         entity.setSubject(dto.getSubject());
         entity.setDescription(dto.getDescription());
-        entity.setPriority(dto.getPriority());
+        entity.setPriority("normal");
         entity.setStatus("pending");
 
         return toResponse(repository.save(entity));
@@ -75,35 +74,15 @@ public class PatientMedicalRequestService {
     }
 
     private MedicalRequestResponse toResponse(PatientMedicalRequest e) {
-        User assignee = e.getAssignedTo();
         return MedicalRequestResponse.builder()
             .id(e.getId())
             .type(e.getRequestType())
             .subject(e.getSubject())
             .description(e.getDescription())
-            .priority(e.getPriority())
-            .status(mapStatusForApi(e.getStatus()))
             .patientId(e.getPatient().getId())
-            .assignedTo(assignee != null ? assignee.getId() : null)
-            .assignedToName(assignee != null ? assignee.getFullName() : null)
             .createdAt(e.getCreatedAt() != null ? ISO_LOCAL.format(e.getCreatedAt()) : null)
             .updatedAt(e.getUpdatedAt() != null ? ISO_LOCAL.format(e.getUpdatedAt()) : null)
             .response(null)
             .build();
-    }
-
-    /** Normalize stored status to frontend-friendly tokens (with underscores). */
-    private String mapStatusForApi(String status) {
-        if (status == null || status.isBlank()) {
-            return "pending";
-        }
-        return switch (status.toLowerCase()) {
-            case "pending" -> "pending";
-            case "in_progress", "in_review", "in review" -> "in_review";
-            case "completed" -> "completed";
-            case "responded" -> "responded";
-            case "submitted" -> "submitted";
-            default -> status.toLowerCase().replace(' ', '_');
-        };
     }
 }

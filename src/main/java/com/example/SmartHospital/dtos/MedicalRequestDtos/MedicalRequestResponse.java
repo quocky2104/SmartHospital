@@ -19,15 +19,7 @@ public class MedicalRequestResponse {
 
     private String description;
 
-    private String priority;
-
-    private String status;
-
     private String patientId;
-
-    private String assignedTo;
-
-    private String assignedToName;
 
     private String createdAt;
 
