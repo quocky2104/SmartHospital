@@ -12,7 +12,9 @@ import lombok.Data;
 @AllArgsConstructor
 public class MedicalRecordResponse {
     private String recordId;
+    private String patientId;
     private String patientName;
+    private String doctorId;
     private String doctorName;
     private LocalDateTime createdAt;
     private String treatmentNotes;
@@ -21,7 +23,9 @@ public class MedicalRecordResponse {
 
     public MedicalRecordResponse(MedicalRecord medicalRecord) {
         this.recordId = medicalRecord.getId();
+        this.patientId = medicalRecord.getPatient() == null ? null : medicalRecord.getPatient().getId();
         this.patientName = medicalRecord.getPatient() == null ? null : medicalRecord.getPatient().getFullName();
+        this.doctorId = medicalRecord.getDoctor() == null ? null : medicalRecord.getDoctor().getId();
         this.doctorName = medicalRecord.getDoctor() == null ? null : medicalRecord.getDoctor().getFullName();
         this.createdAt = medicalRecord.getCreatedAt();
         this.treatmentNotes = medicalRecord.getTreatmentNotes();

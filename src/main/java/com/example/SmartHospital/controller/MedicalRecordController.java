@@ -1,24 +1,28 @@
 package com.example.SmartHospital.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.MedicalRecordDtos.MedicalRecordRequest;
 import com.example.SmartHospital.dtos.MedicalRecordDtos.MedicalRecordResponse;
 import com.example.SmartHospital.service.medical.MedicalRecordService;
+import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MedicalRecordController {
     private final MedicalRecordService medicalRecordService;
+    private final MinioStorageService minioStorageService;
 
     @Operation(summary = "Get a medical record by ID", description = "Patients can access their own records, doctors can access records of their patients")
     @GetMapping("/{recordId}")
@@ -94,5 +99,26 @@ public class MedicalRecordController {
             return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Medical record not found or access denied", null));
         }
         return ResponseEntity.ok(new ApiResponse<>(200, "Medical record hard deleted", null));
+    }
+
+    @Operation(summary = "Upload medical record attachments", description = "Upload multiple files as attachments for medical records")
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse<List<String>>> uploadFiles(
+        @AuthenticationPrincipal String userId,
+        @RequestParam("files") List<MultipartFile> files
+    ) {
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(400, "No files provided", new ArrayList<>()));
+        }
+
+        try {
+            List<String> uploadedPaths = minioStorageService.uploadAdditionalFiles(files, userId);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(201, "Files uploaded successfully", uploadedPaths));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to upload files: " + e.getMessage(), new ArrayList<>()));
+        }
     }
 }

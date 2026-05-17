@@ -1,8 +1,10 @@
 package com.example.SmartHospital.controller;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -11,16 +13,20 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.ChatDtos.ChatConversationDTO;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageRequest;
 import com.example.SmartHospital.dtos.ChatDtos.ChatMessageResponse;
 import com.example.SmartHospital.service.chat.ChatService;
 import com.example.SmartHospital.service.chat.MessageStatusService;
 import com.example.SmartHospital.service.chat.OnlineStatusServicePort;
+import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +40,7 @@ public class ChatController {
     private final ChatService chatService;
     private final OnlineStatusServicePort onlineStatusService;
     private final MessageStatusService messageStatusService;
+    private final MinioStorageService minioStorageService;
 
     @GetMapping("/getAllChats")
     @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
@@ -166,5 +173,27 @@ public class ChatController {
             throw new IllegalArgumentException("User must be authenticated to mark messages as sent");
         }
         messageStatusService.markAsSent(principal, request.get(OTHER_USER_ID));
+    }
+    
+    @PostMapping("/upload")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR')")
+    @Operation(summary = "Upload chat attachments", description = "Upload files to be attached to chat messages")
+    public ResponseEntity<ApiResponse<List<String>>> uploadChatFiles(
+        @AuthenticationPrincipal String userId,
+        @RequestParam("files") List<MultipartFile> files
+    ) {
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(400, "No files provided", new ArrayList<>()));
+        }
+
+        try {
+            List<String> uploadedPaths = minioStorageService.uploadAdditionalFiles(files, userId);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(201, "Files uploaded successfully", uploadedPaths));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to upload files: " + e.getMessage(), new ArrayList<>()));
+        }
     }
 }

@@ -45,7 +45,7 @@ public class MedicationController {
     }
 
     @Operation(summary = "Create medication", description = "Create a medication catalog entry. Usually admin-only in production")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     @PostMapping
     public ResponseEntity<ApiResponse<MedicationResponse>> createMedication(@RequestBody MedicationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)

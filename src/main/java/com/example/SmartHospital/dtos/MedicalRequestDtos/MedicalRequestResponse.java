@@ -25,5 +25,7 @@ public class MedicalRequestResponse {
 
     private String updatedAt;
 
+    private String status;
+
     private String response;
 }

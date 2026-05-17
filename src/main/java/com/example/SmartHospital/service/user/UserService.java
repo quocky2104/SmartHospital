@@ -95,6 +95,39 @@ public class UserService {
         return patientRepository.save(patient);
     }
 
+    @Transactional
+    public void changePasswordByUserId(String userId, String currentPassword, String newPassword, String confirmPassword) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new IllegalArgumentException("Current password is required");
+        }
+
+        if (!passwordEncoder.matches(currentPassword, user.getHashedPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("New password is required");
+        }
+
+        if (confirmPassword != null && !confirmPassword.isBlank() && !newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
+
+        if (newPassword.length() < 8 ||
+            !newPassword.matches(".*[A-Z].*") ||
+            !newPassword.matches(".*[a-z].*") ||
+            !newPassword.matches(".*\\d.*") ||
+            !newPassword.matches(".*[!@#$%^&*()].*")) {
+            throw new IllegalArgumentException("Password is not strong enough");
+        }
+
+        user.setHashedPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
 
 }
 

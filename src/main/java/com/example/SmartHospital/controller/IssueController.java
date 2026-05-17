@@ -1,7 +1,13 @@
 package com.example.SmartHospital.controller;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +26,8 @@ import com.example.SmartHospital.dtos.IssueDtos.CreateIssueRequest;
 import com.example.SmartHospital.dtos.IssueDtos.IssueResponse;
 import com.example.SmartHospital.dtos.IssueDtos.UpdateIssueStatusRequest;
 import com.example.SmartHospital.enums.IssueStatus;
+import com.example.SmartHospital.model.Issue;
+import com.example.SmartHospital.repository.IssueRepository;
 import com.example.SmartHospital.service.issue.IssueService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @SecurityRequirement(name = "bearerAuth")
 public class IssueController {
     private final IssueService issueService;
+    private final IssueRepository issueRepository;
 
     @Operation(
         summary = "Create a new issue report",
@@ -92,6 +101,73 @@ public class IssueController {
         } catch (Exception e) {
             log.error("Error retrieving issue", e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve issue", null));
+        }
+    }
+
+    @Operation(
+        summary = "Get all issues with pagination",
+        description = "Retrieve all issues with pagination, search, and status filtering (admin only)"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/all-issues-paginated")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAllIssuesPaginated(
+        @RequestParam(defaultValue = "0") int pageNumber,
+        @RequestParam(defaultValue = "10") int pageSize,
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) IssueStatus status
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+            Page<Issue> page;
+            
+            if (status != null && search != null && !search.isBlank()) {
+                // Both status and search filter
+                page = issueRepository.findByStatusAndIsDeletedFalse(status, pageable)
+                    .map(p -> p).getContent().stream()
+                    .filter(i -> i.getTitle().toLowerCase().contains(search.toLowerCase()))
+                    .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        list -> new org.springframework.data.domain.PageImpl<>(list, pageable, list.size())
+                    ));
+            } else if (status != null) {
+                // Only status filter
+                page = issueRepository.findByStatusAndIsDeletedFalse(status, pageable);
+            } else if (search != null && !search.isBlank()) {
+                // Only search filter
+                page = issueRepository.findByTitleContainingIgnoreCaseAndIsDeletedFalse(search, pageable);
+            } else {
+                // No filters
+                page = issueRepository.findByIsDeletedFalse(pageable);
+            }
+            
+            List<Map<String, Object>> list = page.getContent()
+                .stream()
+                .map(i -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", i.getId());
+                    item.put("title", i.getTitle());
+                    item.put("description", i.getDescription());
+                    item.put("status", i.getStatus());
+                    item.put("reporterName", i.getReporterId()); // Will be enriched on frontend
+                    item.put("createdAt", i.getCreatedAt());
+                    item.put("adminResponse", i.getAdminResponse());
+                    item.put("resolvedAt", i.getResolvedAt());
+                    return item;
+                })
+                .toList();
+            
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("content", list);
+            response.put("pageNumber", pageNumber);
+            response.put("pageSize", pageSize);
+            response.put("totalElements", page.getTotalElements());
+            response.put("totalPages", page.getTotalPages());
+            response.put("isLast", page.isLast());
+            
+            return ResponseEntity.ok(new ApiResponse<>(200, "Issues retrieved successfully", response));
+        } catch (Exception e) {
+            log.error("Error retrieving paginated issues", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve issues", null));
         }
     }
 

@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AcceptAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentRequest;
+import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentReviewRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.CancelAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.RescheduleAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Response.Response.AppointmentResponse;
@@ -305,6 +306,50 @@ public class AppointmentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(500, "Failed to accept appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Mark appointment as completed",
+        description = "Doctor marks an accepted/scheduled appointment as done"
+    )
+    @PreAuthorize("hasRole('DOCTOR')")
+    @PostMapping("/complete/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> completeAppointment(
+        @PathVariable("id") String id,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment completed successfully", appointmentService.completeAppointment(id, userId))
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to complete appointment: " + e.getMessage(), null));
+        }
+    }
+
+    @Operation(
+        summary = "Rate a completed appointment",
+        description = "Patient can rate and leave a comment for a completed appointment"
+    )
+    @PreAuthorize("hasRole('PATIENT')")
+    @PostMapping("/rate/{id}")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> rateAppointment(
+        @PathVariable("id") String id,
+        @RequestBody @jakarta.validation.Valid AppointmentReviewRequest request,
+        @AuthenticationPrincipal String userId
+    ) {
+        try {
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, "Appointment rated successfully", appointmentService.rateAppointment(id, userId, request))
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to rate appointment: " + e.getMessage(), null));
         }
     }
 

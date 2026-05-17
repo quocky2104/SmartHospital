@@ -2,6 +2,8 @@ package com.example.SmartHospital.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +14,6 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     Optional<Department> findByName(String name);
     List<Department> findAllByIsDeletedFalse();
     Optional<Department> findByIdAndIsDeletedFalse(String id);
+    Page<Department> findByNameContainingIgnoreCaseAndIsDeletedFalse(String name, Pageable pageable);
+    long countByIsDeletedFalse();
 }

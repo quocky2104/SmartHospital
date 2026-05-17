@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class MinioStorageService {
+    // UUID for generating unique file names, and sanitization to prevent issues with special characters in filenames
+
     private final MinioClient minioClient;
 
     @Value("${minio.bucket:avatars}")
@@ -34,9 +36,29 @@ public class MinioStorageService {
     @Value("${minio.additional-file-bucket:request-attachments}")
     private String additionalFileBucket;
 
+    @Value("${minio.chat-file-bucket:chat-files}")
+    private String chatFileBucket;
+
     @Value("${minio.presigned-expiry-seconds:3600}")
     private Integer presignedExpirySeconds;
 
+    // ex: url name: "chat-files/userId/550e8400-e29b-41d4-a716-446655440000-originalfilename.ext"
+    public String uploadChatFile(MultipartFile chatFile, String userId) {
+        if (chatFile == null || chatFile.isEmpty()) {
+            return null;
+        }
+
+        String contentType = chatFile.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = "application/octet-stream";
+        }
+
+        String objectName = userId + "/" + UUID.randomUUID() + "-" + sanitizeFileName(chatFile.getOriginalFilename());
+        uploadFile(chatFileBucket, objectName, chatFile, contentType);
+        return chatFileBucket + "/" + objectName;
+    }
+
+    // ex: url name: "avatars/userId/avatar.png"
     public String uploadAvatar(MultipartFile avatarFile, String userId) {
         if (avatarFile == null || avatarFile.isEmpty()) {
             return null;
@@ -84,6 +106,7 @@ public class MinioStorageService {
         }
     }
 
+    // ex: url name: "medicalrecord-attachments/userId/550e8400-e29b-41d4-a716-446655440000.pdf"
     public List<String> uploadMedicalRecordPdfs(List<MultipartFile> medicalRecordFiles, String userId) {
         List<String> uploadedPaths = new ArrayList<>();
         if (medicalRecordFiles == null || medicalRecordFiles.isEmpty()) {
@@ -109,6 +132,7 @@ public class MinioStorageService {
         return uploadedPaths;
     }
 
+    // ex: url name: "request-attachments/userId/550e8400-e29b-41d4-a716-446655440000-originalfilename.ext"
     public List<String> uploadAdditionalFiles(List<MultipartFile> additionalFiles, String userId) {
         List<String> uploadedPaths = new ArrayList<>();
         if (additionalFiles == null || additionalFiles.isEmpty()) {
@@ -122,6 +146,7 @@ public class MinioStorageService {
                     contentType = "application/octet-stream";
                 }
 
+                // Ex: userId/550e8400-e29b-41d4-a716-446655440000-originalfilename.ext
                 String objectName = userId + "/" + UUID.randomUUID() + "-" + sanitizeFileName(file.getOriginalFilename());
                 uploadFile(additionalFileBucket, objectName, file, contentType);
                 uploadedPaths.add(additionalFileBucket + "/" + objectName);
@@ -198,6 +223,7 @@ public class MinioStorageService {
         }
     }
 
+    // Resolves file extension from original filename, defaults to provided default if not found
     private String resolveFileExtension(String fileName, String defaultExt) {
         if (fileName == null || !fileName.contains(".")) {
             return defaultExt;
@@ -205,6 +231,7 @@ public class MinioStorageService {
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
     }
 
+    // Sanitizes filename by replacing non-alphanumeric characters with underscores
     private String sanitizeFileName(String fileName) {
         if (fileName == null || fileName.isBlank()) {
             return "file";
@@ -212,6 +239,7 @@ public class MinioStorageService {
         return fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
+    // Custom runtime exception for MinIO upload errors
     public static class MinioUploadException extends RuntimeException {
         public MinioUploadException(String message, Throwable cause) {
             super(message, cause);

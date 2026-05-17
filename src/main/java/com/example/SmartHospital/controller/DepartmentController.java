@@ -4,6 +4,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
@@ -41,8 +46,21 @@ public class DepartmentController {
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> listDepartmentsForAdmin() {
-        List<Map<String, Object>> list = departmentRepository.findAll()
+    public ResponseEntity<ApiResponse<Map<String, Object>>> listDepartmentsForAdmin(
+        @RequestParam(defaultValue = "0") int pageNumber,
+        @RequestParam(defaultValue = "10") int pageSize,
+        @RequestParam(required = false) String search
+    ) {
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "name"));
+        Page<Department> page;
+        
+        if (search != null && !search.isBlank()) {
+            page = departmentRepository.findByNameContainingIgnoreCaseAndIsDeletedFalse(search, pageable);
+        } else {
+            page = departmentRepository.findAll(pageable);
+        }
+        
+        List<Map<String, Object>> list = page.getContent()
             .stream()
             .map(d -> {
                 Map<String, Object> item = new LinkedHashMap<>();
@@ -52,7 +70,16 @@ public class DepartmentController {
                 return item;
             })
             .toList();
-        return ResponseEntity.ok(new ApiResponse<>(200, "Departments retrieved", list));
+        
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("content", list);
+        response.put("pageNumber", pageNumber);
+        response.put("pageSize", pageSize);
+        response.put("totalElements", page.getTotalElements());
+        response.put("totalPages", page.getTotalPages());
+        response.put("isLast", page.isLast());
+        
+        return ResponseEntity.ok(new ApiResponse<>(200, "Departments retrieved", response));
     }
 
     @PostMapping

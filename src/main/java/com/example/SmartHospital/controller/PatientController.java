@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
+import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
@@ -130,6 +130,24 @@ public class PatientController {
     public ResponseEntity<ApiResponse<PatientDTO>> viewPatientProfile(@AuthenticationPrincipal String userId) {
         try {
             PatientDTO response = patientManagementService.getPatientById(userId);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Successfully retrieved patient profile", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve patient profile", null));
+        }
+    }
+
+    @Operation(
+        summary = "View a patient profile as doctor",
+        description = "Retrieve a patient's profile information for doctor review"
+    )
+    @PreAuthorize("hasRole('DOCTOR')")
+    @GetMapping("/doctor/patients/{patientId}/profile")
+    public ResponseEntity<ApiResponse<PatientDTO>> viewPatientProfileAsDoctor(@PathVariable String patientId) {
+        try {
+            PatientDTO response = patientManagementService.getPatientById(patientId);
+            if (response == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(404, "Patient not found", null));
+            }
             return ResponseEntity.ok(new ApiResponse<>(200, "Successfully retrieved patient profile", response));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve patient profile", null));

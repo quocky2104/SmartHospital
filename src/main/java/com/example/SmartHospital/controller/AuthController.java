@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.SmartHospital.config.CustomUserDetails;
 import com.example.SmartHospital.config.jwt.JwtProvider;
+import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.ChangePasswordRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.LoginRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.OtpVerificationRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
@@ -357,6 +358,42 @@ public class AuthController {
             log.error("Password reset failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ApiResponse<>(500, "Password reset failed", null));
+        }
+    }
+
+    @Operation(
+        summary = "Change password",
+        description = "Change password for authenticated user using current password verification"
+    )
+    @PostMapping("/change-password")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+        Authentication authentication,
+        @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(401, "Unauthorized: Authentication required. Please login first", null));
+        }
+
+        try {
+            String userId = authentication.getName();
+            userService.changePasswordByUserId(
+                userId,
+                request.getCurrentPassword(),
+                request.getNewPassword(),
+                request.getConfirmPassword()
+            );
+            return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>(200, "Password changed successfully", null));
+        } catch (IllegalArgumentException e) {
+            log.error("Password change failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            log.error("Password change failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Password change failed", null));
         }
     }
     

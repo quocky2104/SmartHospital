@@ -3,6 +3,8 @@ package com.example.SmartHospital.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,4 +31,19 @@ public interface IssueRepository extends JpaRepository<Issue, String> {
     List<Issue> findByStatusOrderByCreatedAtDesc(@Param("status") IssueStatus status);
 
     Optional<Issue> findByIdAndIsDeletedFalse(String id);
+    
+    // Pageable methods for admin
+    Page<Issue> findByIsDeletedFalse(Pageable pageable);
+    
+    Page<Issue> findByTitleContainingIgnoreCaseAndIsDeletedFalse(String title, Pageable pageable);
+    
+    Page<Issue> findByStatusAndIsDeletedFalse(IssueStatus status, Pageable pageable);
+
+    long countByIsDeletedFalse();
+
+    long countByStatusAndIsDeletedFalse(IssueStatus status);
+
+    long countByCreatedAtBetweenAndIsDeletedFalse(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    List<Issue> findTop5ByIsDeletedFalseOrderByCreatedAtDesc();
 }

@@ -62,4 +62,26 @@ public class MedicalRequestController {
         MedicalRequestResponse one = patientMedicalRequestService.getById(id, authentication);
         return ResponseEntity.ok(new ApiResponse<>(200, "Request retrieved", one));
     }
+
+    @Operation(summary = "Close a medical request")
+    @PreAuthorize("hasRole('PATIENT')")
+    @PostMapping("/{id}/close")
+    public ResponseEntity<ApiResponse<MedicalRequestResponse>> close(
+        @PathVariable String id,
+        Authentication authentication
+    ) {
+        MedicalRequestResponse updated = patientMedicalRequestService.closeRequest(id, authentication);
+        return ResponseEntity.ok(new ApiResponse<>(200, "Request closed", updated));
+    }
+
+    @Operation(summary = "Reopen a medical request")
+    @PreAuthorize("hasRole('PATIENT')")
+    @PostMapping("/{id}/reopen")
+    public ResponseEntity<ApiResponse<MedicalRequestResponse>> reopen(
+        @PathVariable String id,
+        Authentication authentication
+    ) {
+        MedicalRequestResponse updated = patientMedicalRequestService.reopenRequest(id, authentication);
+        return ResponseEntity.ok(new ApiResponse<>(200, "Request reopened", updated));
+    }
 }

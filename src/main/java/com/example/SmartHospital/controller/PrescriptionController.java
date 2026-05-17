@@ -6,13 +6,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
@@ -36,6 +36,13 @@ public class PrescriptionController {
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<List<PrescriptionResponse>>> getMyPrescriptions(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(new ApiResponse<>(200, "Prescriptions fetched", prescriptionService.getMyPrescriptions(userId)));
+    }
+
+    @Operation(summary = "Get prescriptions created by me", description = "Doctors can list prescriptions they created")
+    @PreAuthorize("hasRole('DOCTOR')")
+    @GetMapping("/my-doctor")
+    public ResponseEntity<ApiResponse<List<PrescriptionResponse>>> getMyPrescriptionsAsDoctor(@AuthenticationPrincipal String doctorId) {
+        return ResponseEntity.ok(new ApiResponse<>(200, "Prescriptions fetched", prescriptionService.getMyPrescriptionsByDoctor(doctorId)));
     }
 
     @Operation(summary = "Get prescription by ID", description = "Patients can open their own prescription and doctors can open prescriptions they created")

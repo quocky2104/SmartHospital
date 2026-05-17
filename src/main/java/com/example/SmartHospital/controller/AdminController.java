@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.SmartHospital.dtos.AdminDtos.AdminDashboardSummaryResponse;
 import com.example.SmartHospital.dtos.AdminDtos.AdminReportSummaryResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.service.admin.AdminReportService;
@@ -50,5 +51,14 @@ public class AdminController {
     @GetMapping("/reports/yearly")
     public ResponseEntity<ApiResponse<AdminReportSummaryResponse>> getYearlyReport(@RequestParam int year) {
         return ResponseEntity.ok(new ApiResponse<>(200, "Yearly report generated", adminReportService.generateYearly(year)));
+    }
+
+    @Operation(
+        summary = "Get dashboard summary",
+        description = "Retrieve live admin dashboard statistics and recent issues"
+    )
+    @GetMapping("/dashboard/summary")
+    public ResponseEntity<ApiResponse<AdminDashboardSummaryResponse>> getDashboardSummary() {
+        return ResponseEntity.ok(new ApiResponse<>(200, "Dashboard summary generated", adminReportService.generateDashboardSummary()));
     }
 }

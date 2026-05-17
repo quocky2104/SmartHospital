@@ -21,8 +21,11 @@ public class MinioBucketInitializer {
             if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("request-attachments").build())) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket("request-attachments").build());
             }
-            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("message-attachments").build())) {
-                minioClient.makeBucket(MakeBucketArgs.builder().bucket("message-attachments").build());
+            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("medicalrecord-attachments").build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket("medicalrecord-attachments").build());
+            }
+            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket("chat-files").build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket("chat-files").build());
             }
         } catch (Exception e) {
             // Log the error and rethrow as a runtime exception to prevent application from starting

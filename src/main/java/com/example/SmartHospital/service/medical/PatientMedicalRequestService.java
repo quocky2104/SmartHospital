@@ -73,16 +73,41 @@ public class PatientMedicalRequestService {
         return toResponse(entity);
     }
 
+    public MedicalRequestResponse closeRequest(String id, Authentication authentication) {
+        PatientMedicalRequest entity = repository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        if (!entity.getPatient().getId().equals(authentication.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        entity.setStatus("completed");
+        return toResponse(repository.save(entity));
+    }
+
+    public MedicalRequestResponse reopenRequest(String id, Authentication authentication) {
+        PatientMedicalRequest entity = repository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        if (!entity.getPatient().getId().equals(authentication.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        entity.setStatus("pending");
+        return toResponse(repository.save(entity));
+    }
+
     private MedicalRequestResponse toResponse(PatientMedicalRequest e) {
-        return MedicalRequestResponse.builder()
-            .id(e.getId())
-            .type(e.getRequestType())
-            .subject(e.getSubject())
-            .description(e.getDescription())
-            .patientId(e.getPatient().getId())
-            .createdAt(e.getCreatedAt() != null ? ISO_LOCAL.format(e.getCreatedAt()) : null)
-            .updatedAt(e.getUpdatedAt() != null ? ISO_LOCAL.format(e.getUpdatedAt()) : null)
-            .response(null)
-            .build();
+        MedicalRequestResponse response = new MedicalRequestResponse();
+        response.setId(e.getId());
+        response.setType(e.getRequestType());
+        response.setSubject(e.getSubject());
+        response.setDescription(e.getDescription());
+        response.setPatientId(e.getPatient().getId());
+        response.setCreatedAt(e.getCreatedAt() != null ? ISO_LOCAL.format(e.getCreatedAt()) : null);
+        response.setUpdatedAt(e.getUpdatedAt() != null ? ISO_LOCAL.format(e.getUpdatedAt()) : null);
+        response.setStatus(e.getStatus());
+        response.setResponse(null);
+        return response;
     }
 }

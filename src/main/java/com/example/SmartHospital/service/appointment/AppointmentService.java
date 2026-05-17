@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.SmartHospital.config.exceptions.ConflictException;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AcceptAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentRequest;
+import com.example.SmartHospital.dtos.AppointmentDtos.Request.AppointmentReviewRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.CancelAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Request.RescheduleAppointmentRequest;
 import com.example.SmartHospital.dtos.AppointmentDtos.Response.Response.AppointmentResponse;
@@ -37,7 +38,8 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final NotificationService notificationService;
 
-    public Page<AppointmentResponse> getPatientAppointments(
+        @Transactional(readOnly = true)
+        public Page<AppointmentResponse> getPatientAppointments(
             String patientId,
             String search,
             Pageable pageable
@@ -47,7 +49,8 @@ public class AppointmentService {
                 .map(AppointmentResponse::new);
     }
 
-    public Page<AppointmentResponse> getDoctorAppointments(
+        @Transactional(readOnly = true)
+        public Page<AppointmentResponse> getDoctorAppointments(
             String doctorId,
             String search,
             Pageable pageable
@@ -140,6 +143,46 @@ public class AppointmentService {
             "Your appointment was accepted and scheduled for " + saved.getAppointmentDateTime()
         );
 
+        return new AppointmentResponse(saved);
+    }
+
+    public AppointmentResponse completeAppointment(String appointmentId, String doctorId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        if (!appointment.getDoctor().getId().equals(doctorId)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new RuntimeException("Cancelled appointment cannot be marked as done");
+        }
+
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        Appointment saved = appointmentRepository.save(appointment);
+        notificationService.notifyPatientAppointmentEvent(
+            saved,
+            "APPOINTMENT_COMPLETED",
+            "Your appointment has been marked as completed by the doctor."
+        );
+        return new AppointmentResponse(saved);
+    }
+
+    public AppointmentResponse rateAppointment(String appointmentId, String patientId, AppointmentReviewRequest request) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        if (!appointment.getPatient().getId().equals(patientId)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new RuntimeException("Only completed appointments can be rated");
+        }
+
+        appointment.setRating(request.getRating());
+        appointment.setReviewComment(request.getComment() == null ? null : request.getComment().trim());
+        Appointment saved = appointmentRepository.save(appointment);
         return new AppointmentResponse(saved);
     }
 
