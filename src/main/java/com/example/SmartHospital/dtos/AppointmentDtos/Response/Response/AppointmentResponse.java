@@ -13,6 +13,7 @@ public class AppointmentResponse {
     private String patientName;
     private String doctorId;
     private String doctorName;
+    private String type;
     private String appointmentDate;
     private String appointmentTime;
     private String status;
@@ -28,6 +29,7 @@ public class AppointmentResponse {
         this.patientName = appointment.getPatient() == null ? null : appointment.getPatient().getFullName();
         this.doctorId = appointment.getDoctor() == null ? null : appointment.getDoctor().getId();
         this.doctorName = appointment.getDoctor() == null ? null : appointment.getDoctor().getFullName();
+        this.type = appointment.getType();
         this.appointmentDate = appointment.getAppointmentDateTime() == null ? null : appointment.getAppointmentDateTime().toLocalDate().toString();
         this.appointmentTime = appointment.getAppointmentDateTime() == null ? null : appointment.getAppointmentDateTime().toLocalTime().toString();
         this.status = appointment.getStatus() == null ? null : appointment.getStatus().name();

@@ -87,6 +87,8 @@ public class AppointmentService {
         appointment.setDoctor(doctor);
         appointment.setDepartment(doctor.getDepartment());
 
+        appointment.setType(normalizeAppointmentType(request.getType()));
+
         Appointment saved = appointmentRepository.save(appointment);
         notificationService.notifyDoctorAppointmentEvent(
             saved,
@@ -94,6 +96,20 @@ public class AppointmentService {
             "New appointment request from " + patient.getFullName()
         );
         return new AppointmentResponse(saved);
+    }
+
+    private String normalizeAppointmentType(String type) {
+        if (type == null || type.isBlank()) {
+            return "Check-up";
+        }
+
+        String trimmed = type.trim();
+        String lower = trimmed.toLowerCase();
+        if (lower.startsWith("open requests to review:") || trimmed.contains("\"main_symptoms\"")) {
+            return "Check-up";
+        }
+
+        return trimmed;
     }
 
     public AppointmentResponse cancelAppointment(CancelAppointmentRequest request, String actorUserId) {

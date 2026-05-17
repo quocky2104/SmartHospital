@@ -11,6 +11,7 @@ import lombok.Data;
 @Data
 public class AppointmentRequest {
     private String doctorId;
+    private String type;
     @Schema(description = "Date of the appointment", example = "2026-04-26", format = "date")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate appointmentDate;

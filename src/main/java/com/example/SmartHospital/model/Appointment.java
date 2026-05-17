@@ -34,6 +34,9 @@ public class Appointment {
     @Column(nullable=false)
     private AppointmentStatus status;
 
+    @Column(name = "appointment_type", length = 100)
+    private String type;
+
     @Lob
     private String notes;
     private Integer rating;

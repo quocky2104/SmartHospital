@@ -12,6 +12,10 @@ import com.example.SmartHospital.dtos.IssueDtos.UpdateIssueStatusRequest;
 import com.example.SmartHospital.enums.IssueStatus;
 import com.example.SmartHospital.model.Admin;
 import com.example.SmartHospital.model.Issue;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import com.example.SmartHospital.model.User;
 import com.example.SmartHospital.repository.IssueRepository;
 import com.example.SmartHospital.repository.UserRepository;
@@ -24,9 +28,7 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
 
-    /**
-     * Create a new issue report from a user (doctor or patient)
-     */
+    // Create a new issue (reported by doctor or patient)
     public IssueResponse createIssue(String reporterId, CreateIssueRequest request) {
         // Verify user exists
         User reporter = userRepository.findById(reporterId)
@@ -44,41 +46,31 @@ public class IssueService {
         return response;
     }
 
-    /**
-     * Get all issues reported by a specific user
-     */
+    // Get issues reported by a specific user (doctor or patient)
     public List<IssueResponse> getIssuesByReporter(String reporterId) {
         List<Issue> issues = issueRepository.findByReporterIdAndIsDeletedFalse(reporterId);
         return enrichIssuesWithReporterNames(issues);
     }
 
-    /**
-     * Get all open issues (for admin dashboard)
-     */
+    // Get all open issues (for admin dashboard)
     public List<IssueResponse> getAllOpenIssues() {
         List<Issue> issues = issueRepository.findByStatusOrderByCreatedAtDesc(IssueStatus.OPEN);
         return enrichIssuesWithReporterNames(issues);
     }
 
-    /**
-     * Get all issues
-     */
+    // Get all issues (for admin dashboard)
     public List<IssueResponse> getAllIssues() {
         List<Issue> issues = issueRepository.findAllActiveIssues();
         return enrichIssuesWithReporterNames(issues);
     }
 
-    /**
-     * Get issues by status
-     */
+    // Get issues by status
     public List<IssueResponse> getIssuesByStatus(IssueStatus status) {
         List<Issue> issues = issueRepository.findByStatusOrderByCreatedAtDesc(status);
         return enrichIssuesWithReporterNames(issues);
     }
 
-    /**
-     * Get issues assigned to a specific admin
-     */
+    // Get issues assigned to a specific admin
     public List<IssueResponse> getIssuesAssignedToAdmin(String adminId) {
         Admin admin = (Admin) userRepository.findById(adminId)
             .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
@@ -87,9 +79,7 @@ public class IssueService {
         return enrichIssuesWithReporterNames(issues);
     }
 
-    /**
-     * Get a specific issue by ID
-     */
+    // Get issue details by ID
     public IssueResponse getIssueById(String issueId) {
         Issue issue = issueRepository.findByIdAndIsDeletedFalse(issueId)
             .orElseThrow(() -> new IllegalArgumentException("Issue not found"));
@@ -103,9 +93,32 @@ public class IssueService {
         return response;
     }
 
-    /**
-     * Update issue status (admin only)
-     */
+    // Admin paginated view of issues with optional search and filter by status
+    public Page<Issue> getAllIssuesPaginated(int pageNumber, int pageSize, String search, IssueStatus status) {
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Issue> page;
+
+        if (status != null && search != null && !search.isBlank()) {
+            // Both status and search filter
+            page = issueRepository.findByStatusAndIsDeletedFalse(status, pageable)
+                .map(p -> p); // keep page
+            // filter by title containing search
+            java.util.List<Issue> filtered = page.getContent().stream()
+                .filter(i -> i.getTitle() != null && i.getTitle().toLowerCase().contains(search.toLowerCase()))
+                .toList();
+            return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+        } else if (status != null) {
+            page = issueRepository.findByStatusAndIsDeletedFalse(status, pageable);
+        } else if (search != null && !search.isBlank()) {
+            page = issueRepository.findByTitleContainingIgnoreCaseAndIsDeletedFalse(search, pageable);
+        } else {
+            page = issueRepository.findByIsDeletedFalse(pageable);
+        }
+
+        return page;
+    }
+
+    // Admin updates issue status and optionally adds a response
     public IssueResponse updateIssueStatus(String issueId, String adminId, UpdateIssueStatusRequest request) {
         Issue issue = issueRepository.findByIdAndIsDeletedFalse(issueId)
             .orElseThrow(() -> new IllegalArgumentException("Issue not found"));
@@ -136,9 +149,7 @@ public class IssueService {
         return response;
     }
 
-    /**
-     * Add response to an issue (admin only)
-     */
+    // Admin responds to an issue (can update status and add response)
     public IssueResponse respondToIssue(String issueId, String adminId, String response) {
         Issue issue = issueRepository.findByIdAndIsDeletedFalse(issueId)
             .orElseThrow(() -> new IllegalArgumentException("Issue not found"));
@@ -162,9 +173,7 @@ public class IssueService {
         return issueResponse;
     }
 
-    /**
-     * Soft delete an issue
-     */
+    // Soft delete an issue (admin only)
     public void deleteIssue(String issueId) {
         Issue issue = issueRepository.findByIdAndIsDeletedFalse(issueId)
             .orElseThrow(() -> new IllegalArgumentException("Issue not found"));

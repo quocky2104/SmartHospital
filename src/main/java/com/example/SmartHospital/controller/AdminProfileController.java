@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.UserDtos.AdminProfileDTO;
 import com.example.SmartHospital.model.User;
-import com.example.SmartHospital.repository.UserRepository;
+import com.example.SmartHospital.service.user.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AdminProfileController {
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @Operation(
         summary = "View admin profile",
@@ -30,9 +30,12 @@ public class AdminProfileController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/view")
     public ResponseEntity<ApiResponse<AdminProfileDTO>> viewAdminProfile(@AuthenticationPrincipal String userId) {
-        return userRepository.findById(userId)
-            .map(this::toResponse)
-            .orElseGet(() -> ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve admin profile", null)));
+        try {
+            User user = userService.getUserById(userId);
+            return toResponse(user);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Failed to retrieve admin profile", null));
+        }
     }
 
     private ResponseEntity<ApiResponse<AdminProfileDTO>> toResponse(User user) {

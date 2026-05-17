@@ -95,6 +95,11 @@ public class UserService {
         return patientRepository.save(patient);
     }
 
+    public User getUserById(String userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
     @Transactional
     public void changePasswordByUserId(String userId, String currentPassword, String newPassword, String confirmPassword) {
         User user = userRepository.findById(userId)
