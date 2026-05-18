@@ -35,4 +35,6 @@ public class PatientDTO {
     private String insuranceProvider;
     private String bloodType;
     private List<EmergencyContact> emergencyContacts;
+    private Boolean twoFactorEnabled;
+    private String createdAt;
 }

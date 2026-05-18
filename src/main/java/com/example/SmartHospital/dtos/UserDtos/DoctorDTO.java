@@ -27,4 +27,5 @@ public class DoctorDTO {
     private String workingHours;
     private String availabilityStatus;
     private String departmentId;
+    private Boolean twoFactorEnabled;
 }

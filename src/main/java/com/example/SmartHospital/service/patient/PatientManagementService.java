@@ -270,6 +270,8 @@ public class PatientManagementService {
         dto.setBloodType(patient.getBloodType());
         dto.setEmergencyContacts(patient.getEmergencyContacts());
         dto.setAdditionalFiles(patient.getAdditionalFiles());
+        dto.setTwoFactorEnabled(patient.getTwoFactorEnabled());
+        dto.setCreatedAt(patient.getCreatedAt() == null ? null : patient.getCreatedAt().toString());
         return dto;
     }
 }

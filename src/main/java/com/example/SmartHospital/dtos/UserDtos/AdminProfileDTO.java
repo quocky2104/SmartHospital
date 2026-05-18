@@ -27,6 +27,7 @@ public class AdminProfileDTO {
     private String zipCode;
     private String avatarPath;
     private String role;
+    private Boolean twoFactorEnabled;
 
     public static AdminProfileDTO fromUser(User user) {
         return new AdminProfileDTO(
@@ -43,7 +44,8 @@ public class AdminProfileDTO {
             user.getCity(),
             user.getZipCode(),
             user.getAvatarPath(),
-            user.getRole() != null ? user.getRole().name() : null
+            user.getRole() != null ? user.getRole().name() : null,
+            user.getTwoFactorEnabled()
         );
     }
 }

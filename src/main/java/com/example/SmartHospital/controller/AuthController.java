@@ -27,8 +27,10 @@ import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequ
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.ResetPasswordRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.SendOtpRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
+import com.example.SmartHospital.dtos.AuthDtos.Response.LoginResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ResetTokenResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.TokenResponse;
+import com.example.SmartHospital.dtos.AuthDtos.Response.TwoFactorSettingsResponse;
 import com.example.SmartHospital.dtos.AuthDtos.Response.VerifyTokenResponse;
 import com.example.SmartHospital.model.User;
 import com.example.SmartHospital.service.auth.ForgotPasswordService;
@@ -84,7 +86,7 @@ public class AuthController {
         description = "Authenticate user with email and password. Returns access token and sets refresh token in HTTP-only secure cookie"
     )
     @PostMapping("/login")
-    public  ResponseEntity<ApiResponse<TokenResponse>> login(
+    public  ResponseEntity<ApiResponse<Object>> login(
         @RequestBody LoginRequest loginRequest,
         HttpServletResponse response
     ) {
@@ -96,6 +98,12 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
             );
             CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();  
+            User authenticatedUser = userService.getUserById(user.getId());
+            if (Boolean.TRUE.equals(authenticatedUser.getTwoFactorEnabled())) {
+                CompletableFuture<String> verifyToken = forgotPasswordService.sendTwoFactorOtp(user.getEmail());
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(new ApiResponse<>(202, "Two-factor authentication required", new LoginResponse(true, null, verifyToken.join())));
+            }
             Map<String, Object> claims = Map.of(
                 "userId", user.getId(),
                 "email", user.getUsername(),
@@ -136,6 +144,75 @@ public class AuthController {
             log.error("Login failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ApiResponse<>(500, "Login failed", null));
+        }
+    }
+
+    @Operation(
+        summary = "Verify login OTP",
+        description = "Validate the OTP sent during login when two-factor authentication is enabled"
+    )
+    @PostMapping("/verify-login-otp")
+    public ResponseEntity<ApiResponse<TokenResponse>> verifyLoginOtp(@RequestBody OtpVerificationRequest request, HttpServletResponse response) {
+        try {
+            String token = request.getToken();
+            String otp = request.getOtp();
+            String loginToken = forgotPasswordService.verifyTwoFactorOtp(token, otp).join();
+            String email = forgotPasswordService.getLoginEmailForToken(loginToken);
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(401, "OTP verification failed", null));
+            }
+
+            CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(email);
+            Map<String, Object> claims = Map.of(
+                "userId", userDetails.getId(),
+                "email", userDetails.getUsername(),
+                "roles", userDetails.getAuthorities().stream().map(a -> a.getAuthority()).toList()
+            );
+
+            String accessToken = jwtProvider.generateAccessToken(claims);
+            userService.updateLastLogin(userDetails.getEmail());
+            String refreshToken = jwtProvider.generateRefreshToken(claims);
+            Claims refreshClaims = jwtProvider.getClaims(refreshToken);
+            redisTokenService.storeRefreshToken(
+                refreshClaims.get("email", String.class),
+                refreshClaims.getId(),
+                refreshToken,
+                Duration.ofMillis(refreshTokenExpiration)
+            );
+
+            String cookieValue =
+                "refreshToken=" + refreshToken
+                + "; HttpOnly"
+                + "; Secure"
+                + "; SameSite=Strict"
+                + "; Max-Age=" + refreshTokenExpiration / 1000;
+            response.setHeader("Set-Cookie", cookieValue);
+            forgotPasswordService.consumeLoginToken(loginToken);
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "Login successful", new TokenResponse(accessToken)));
+        } catch (Exception e) {
+            log.error("Login OTP verification failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(401, "OTP verification failed", null));
+        }
+    }
+
+    @Operation(
+        summary = "Send login OTP",
+        description = "Send a one-time password for login when two-factor authentication is enabled"
+    )
+    @PostMapping("/send-login-otp")
+    public ResponseEntity<ApiResponse<VerifyTokenResponse>> sendLoginOtp(@RequestBody @Valid SendOtpRequest request) {
+        String email = request.getEmail();
+        try {
+            CompletableFuture<String> verifyToken = forgotPasswordService.sendTwoFactorOtp(email);
+            return ResponseEntity.status(HttpStatus.OK)
+            .body(new ApiResponse<>(200, "Login OTP sent successfully", new VerifyTokenResponse(verifyToken.join())));
+        } catch (Exception e) {
+            log.error("Failed to send login OTP: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new ApiResponse<>(500, "Failed to send login OTP", null));
         }
     }
 
@@ -396,5 +473,39 @@ public class AuthController {
                 .body(new ApiResponse<>(500, "Password change failed", null));
         }
     }
-    
+
+    @Operation(
+        summary = "Update two-factor authentication",
+        description = "Enable or disable email-based two-factor authentication for the authenticated user"
+    )
+    @PostMapping("/two-factor")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<TwoFactorSettingsResponse>> updateTwoFactor(
+        Authentication authentication,
+        @RequestBody Map<String, Boolean> body
+    ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(401, "Unauthorized: Authentication required. Please login first", null));
+        }
+
+        try {
+            boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+            userService.updateTwoFactorEnabled(authentication.getName(), enabled);
+            return ResponseEntity.ok(
+                new ApiResponse<>(
+                    200,
+                    "Two-factor authentication updated",
+                    new TwoFactorSettingsResponse(enabled)
+                )
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, e.getMessage(), null));
+        } catch (Exception e) {
+            log.error("Failed to update two-factor authentication: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(500, "Failed to update two-factor authentication", null));
+        }
+    }
 }

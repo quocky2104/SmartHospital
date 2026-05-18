@@ -33,6 +33,9 @@ public class ForgotPasswordService {
     private static final String EMAIL_KEY_PREFIX = "email:";
     private static final String RESET_EMAIL_KEY_PREFIX = "reset-email:";
     private static final String RESET_TOKEN_KEY_PREFIX = "reset-token:";
+    private static final String LOGIN_OTP_KEY_PREFIX = "login-otp:";
+    private static final String LOGIN_EMAIL_KEY_PREFIX = "login-email:";
+    private static final String LOGIN_TOKEN_KEY_PREFIX = "login-token:";
 
     private final UserRepository userRepository;
     private final JavaMailSender mailSender;
@@ -46,13 +49,22 @@ public class ForgotPasswordService {
 
     @Async
     public CompletableFuture<String> sendOtp(String email) { // CompletableFuture<String> help to return token asynchronously
+        return sendOtp(email, "password-reset");
+    }
+
+    @Async
+    public CompletableFuture<String> sendTwoFactorOtp(String email) {
+        return sendOtp(email, "login");
+    }
+
+    private CompletableFuture<String> sendOtp(String email, String purpose) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User with email " + email + " not found"));
         
         String otp = generateOTP();
         String token = UUID.randomUUID().toString();
 
-        OtpEmailMessage otpEmailMessage = new OtpEmailMessage(token, email, user.getFullName(), otp);
+        OtpEmailMessage otpEmailMessage = new OtpEmailMessage(token, email, user.getFullName(), otp, purpose);
         // Queue email task so OTP mail is durable and can be retried if mail provider is unavailable.
         rabbitTemplate.convertAndSend(RabbitMQConfig.OTP_EXCHANGE, RabbitMQConfig.OTP_ROUTING_KEY, otpEmailMessage);
         return CompletableFuture.completedFuture(token);
@@ -66,14 +78,16 @@ public class ForgotPasswordService {
 
             helper.setFrom(emailHost, "SmartHospital Support");
             helper.setTo(message.getEmail());
-            helper.setSubject("[SmartHospital] Your OTP for Password Reset");
+            helper.setSubject("[SmartHospital] Your " + ("login".equalsIgnoreCase(message.getPurpose()) ? "login verification" : "password reset") + " OTP");
             String htmlContent = getHTMLContent(message.getOtp(), message.getFullName());
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
 
             // Start expiration only after email is successfully sent to avoid early OTP timeout.
-            redisTemplate.opsForValue().set(OTP_KEY_PREFIX + message.getToken(), message.getOtp(), Duration.ofMinutes(5));
-            redisTemplate.opsForValue().set(EMAIL_KEY_PREFIX + message.getToken(), message.getEmail(), Duration.ofMinutes(5));
+            String otpKeyPrefix = "login".equalsIgnoreCase(message.getPurpose()) ? LOGIN_OTP_KEY_PREFIX : OTP_KEY_PREFIX;
+            String emailKeyPrefix = "login".equalsIgnoreCase(message.getPurpose()) ? LOGIN_EMAIL_KEY_PREFIX : EMAIL_KEY_PREFIX;
+            redisTemplate.opsForValue().set(otpKeyPrefix + message.getToken(), message.getOtp(), Duration.ofMinutes(5));
+            redisTemplate.opsForValue().set(emailKeyPrefix + message.getToken(), message.getEmail(), Duration.ofMinutes(5));
         } catch (MessagingException | IOException e) {
             throw new RuntimeException("Failed to send OTP email from queue", e);
         }
@@ -117,6 +131,46 @@ public class ForgotPasswordService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to verify OTP", e);
         }
+    }
+
+    public CompletableFuture<String> verifyTwoFactorOtp(String token, String otp) {
+        try {
+            String value = redisTemplate.opsForValue().get(LOGIN_OTP_KEY_PREFIX + token);
+            if (value == null) {
+                throw new IllegalArgumentException("OTP expired or invalid");
+            }
+
+            if (!value.equals(otp)) {
+                throw new IllegalArgumentException("Invalid OTP");
+            }
+
+            String email = redisTemplate.opsForValue().get(LOGIN_EMAIL_KEY_PREFIX + token);
+            if (email == null) {
+                throw new IllegalArgumentException("User with email not found");
+            }
+
+            String loginToken = UUID.randomUUID().toString();
+            redisTemplate.opsForValue().set(
+                LOGIN_TOKEN_KEY_PREFIX + loginToken,
+                email,
+                Duration.ofMinutes(15)
+            );
+            redisTemplate.delete(LOGIN_EMAIL_KEY_PREFIX + token);
+            redisTemplate.delete(LOGIN_OTP_KEY_PREFIX + token);
+            return CompletableFuture.completedFuture(loginToken);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to verify OTP", e);
+        }
+    }
+
+    public String getLoginEmailForToken(String token) {
+        return redisTemplate.opsForValue().get(LOGIN_TOKEN_KEY_PREFIX + token);
+    }
+
+    public void consumeLoginToken(String token) {
+        redisTemplate.delete(LOGIN_TOKEN_KEY_PREFIX + token);
     }
 
     public void resetPassword(String token, String newPassword) {

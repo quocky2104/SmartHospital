@@ -101,6 +101,14 @@ public class UserService {
     }
 
     @Transactional
+    public void updateTwoFactorEnabled(String userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setTwoFactorEnabled(enabled);
+        userRepository.save(user);
+    }
+
+    @Transactional
     public void changePasswordByUserId(String userId, String currentPassword, String newPassword, String confirmPassword) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));

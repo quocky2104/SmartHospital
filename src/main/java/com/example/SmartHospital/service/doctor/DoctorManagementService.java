@@ -1,8 +1,6 @@
 package com.example.SmartHospital.service.doctor;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,7 +13,6 @@ import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.DoctorCreateRequest;
 import com.example.SmartHospital.dtos.UserDtos.DoctorDTO;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.DoctorEditProfileRequest;
-import com.example.SmartHospital.enums.GenderType;
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.model.Department;
@@ -209,6 +206,7 @@ public class DoctorManagementService {
         dto.setAddress(doctor.getAddress());
         dto.setAvatarPath(doctor.getAvatarPath());
         dto.setStatus(doctor.getStatus());
+        dto.setTwoFactorEnabled(doctor.getTwoFactorEnabled());
         if (doctor.getDepartment() != null) {
             dto.setDepartmentId(doctor.getDepartment().getId());
         }

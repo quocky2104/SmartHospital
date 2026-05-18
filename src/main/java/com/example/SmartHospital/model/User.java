@@ -94,4 +94,8 @@ public class User {
     @Column(nullable = false)
     @ColumnDefault("false") 
     private Boolean isDeleted = false;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean twoFactorEnabled = false;
 }

@@ -16,4 +16,5 @@ public class OtpEmailMessage implements Serializable {
     private String email;
     private String fullName;
     private String otp;
+    private String purpose;
 }
