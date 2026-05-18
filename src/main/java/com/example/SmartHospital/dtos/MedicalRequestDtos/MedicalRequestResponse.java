@@ -20,6 +20,8 @@ public class MedicalRequestResponse {
     private String description;
 
     private String patientId;
+    
+    private String patientName;
 
     private String createdAt;
 

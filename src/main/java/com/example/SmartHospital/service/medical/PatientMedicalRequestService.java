@@ -104,6 +104,7 @@ public class PatientMedicalRequestService {
         response.setSubject(e.getSubject());
         response.setDescription(e.getDescription());
         response.setPatientId(e.getPatient().getId());
+        response.setPatientName(e.getPatient().getFullName());
         response.setCreatedAt(e.getCreatedAt() != null ? ISO_LOCAL.format(e.getCreatedAt()) : null);
         response.setUpdatedAt(e.getUpdatedAt() != null ? ISO_LOCAL.format(e.getUpdatedAt()) : null);
         response.setStatus(e.getStatus());
