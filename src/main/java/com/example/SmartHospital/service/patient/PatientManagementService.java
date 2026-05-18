@@ -11,9 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
+import com.example.SmartHospital.dtos.UserDtos.PatientCreateRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
 import com.example.SmartHospital.enums.RoleType;
 import com.example.SmartHospital.enums.UserStatus;
@@ -76,7 +76,7 @@ public class PatientManagementService {
         return convertToPatientDTO(patient);
     }
 
-    public PatientDTO createPatient(RegisterRequest request) {
+    public PatientDTO createPatient(PatientCreateRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
@@ -97,13 +97,15 @@ public class PatientManagementService {
         patient.setIdentityNumber(request.getIdentityNumber());
         patient.setAddress(request.getAddress());
         patient.setCity(request.getCity());
-        patient.setZipCode(null);
+        patient.setZipCode(request.getZipCode());
         patient.setGender(request.getGender());
         patient.setDateOfBirth(request.getDateOfBirth());
         patient.setRole(RoleType.PATIENT);
         patient.setStatus(UserStatus.ACTIVE);
         patient.setInsuranceNumber(request.getInsuranceNumber());
+        patient.setInsuranceId(request.getInsuranceId());
         patient.setInsuranceProvider(request.getInsuranceProvider());
+        patient.setBloodType(request.getBloodType());
         patient.setAvatarPath(request.getAvatarPath());
         if (request.getEmergencyContacts() != null && !request.getEmergencyContacts().isEmpty()) {
             patient.setEmergencyContacts(

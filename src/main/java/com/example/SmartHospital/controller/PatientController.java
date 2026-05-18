@@ -15,16 +15,17 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.SmartHospital.dtos.AuthDtos.Request.AuthRequests.RegisterRequest;
 import com.example.SmartHospital.dtos.AuthDtos.Response.ApiResponse;
 import com.example.SmartHospital.dtos.PaginatedResponse;
 import com.example.SmartHospital.dtos.UserDtos.EditProfile.PatientEditProfileRequest;
+import com.example.SmartHospital.dtos.UserDtos.PatientCreateRequest;
 import com.example.SmartHospital.dtos.UserDtos.PatientDTO;
 import com.example.SmartHospital.service.patient.PatientManagementService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -87,7 +88,7 @@ public class PatientController {
     )
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/patients/create")
-    public ResponseEntity<ApiResponse<PatientDTO>> createPatient(@org.springframework.web.bind.annotation.RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<PatientDTO>> createPatient(@Valid @org.springframework.web.bind.annotation.RequestBody PatientCreateRequest request) {
         try {
             PatientDTO response = patientManagementService.createPatient(request);
             return ResponseEntity.status(201).body(new ApiResponse<>(201, "Patient created successfully", response));

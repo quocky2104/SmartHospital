@@ -50,5 +50,6 @@ public class PatientCreateRequest {
     private String insuranceId;
     private String insuranceProvider;
     private String bloodType;
+    private String avatarPath;
     private List<EmergencyContactRequest> emergencyContacts;
 }

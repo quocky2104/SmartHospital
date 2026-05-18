@@ -36,6 +36,8 @@ public class RegisterRequest {
     @NotBlank
     private String city;
 
+    private String zipCode;
+
     @NotNull
     private GenderType gender;
 
@@ -43,7 +45,9 @@ public class RegisterRequest {
     private LocalDate dateOfBirth;
 
     private String insuranceNumber; //optional
+    private String insuranceId; //optional
     private String insuranceProvider; //optional
+    private String bloodType; //optional
     private String avatarPath; //optional
     
     private List<EmergencyContactRequest> emergencyContacts; //optional

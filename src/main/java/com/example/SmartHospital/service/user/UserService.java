@@ -77,10 +77,13 @@ public class UserService {
         patient.setDateOfBirth(registerRequest.getDateOfBirth());
         patient.setAddress(registerRequest.getAddress());
         patient.setCity(registerRequest.getCity());
+        patient.setZipCode(registerRequest.getZipCode());
         patient.setStatus(UserStatus.ACTIVE);
         patient.setRole(RoleType.PATIENT);
         patient.setInsuranceNumber(registerRequest.getInsuranceNumber());
+        patient.setInsuranceId(registerRequest.getInsuranceId());
         patient.setInsuranceProvider(registerRequest.getInsuranceProvider());
+        patient.setBloodType(registerRequest.getBloodType());
         patient.setAvatarPath(registerRequest.getAvatarPath());
         
         // Map emergency contacts if provided

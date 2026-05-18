@@ -13,6 +13,7 @@ import com.example.SmartHospital.enums.UserStatus;
 import com.example.SmartHospital.model.Admin;
 import com.example.SmartHospital.model.Department;
 import com.example.SmartHospital.model.Doctor;
+import com.example.SmartHospital.model.EmergencyContact;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.DepartmentRepository;
 import com.example.SmartHospital.repository.UserRepository;
@@ -40,6 +41,8 @@ public class DataInitializer implements CommandLineRunner{
         admin.setPhoneNumber("0900000000");
         admin.setIdentityNumber("ADMIN0001");
         admin.setAddress("321 Hospital Street");
+        admin.setCity("Ho Chi Minh City");
+        admin.setZipCode("700000");
         admin.setDateOfBirth(LocalDate.parse("1980-01-01")); 
         admin.setGender(GenderType.MALE);
         admin.setRole(RoleType.ADMIN);
@@ -63,7 +66,11 @@ public class DataInitializer implements CommandLineRunner{
                 if (userRepository.existsByEmail(email)) continue;
 
                 Doctor doctor = new Doctor();
-                doctor.setFullName("Doctor " + department.getName() + " " + i);
+                String firstName = "Doctor";
+                String lastName = department.getName() + " " + i;
+                doctor.setFirstName(firstName);
+                doctor.setLastName(lastName);
+                doctor.setFullName(firstName + " " + lastName);
                 doctor.setEmail(email);
                 doctor.setPhoneNumber("091" + String.format("%07d", deptIndex * 100 + i));
                 doctor.setIdentityNumber("DOC" + String.format("%04d", deptIndex * 100 + i));
@@ -72,6 +79,8 @@ public class DataInitializer implements CommandLineRunner{
                 doctor.setRole(RoleType.DOCTOR);
                 doctor.setStatus(UserStatus.ACTIVE);
                 doctor.setAddress("Doctor Address " + department.getName() + " " + i);
+                doctor.setCity("Ho Chi Minh City");
+                doctor.setZipCode("700000");
                 doctor.setHashedPassword(passwordEncoder.encode("Doctor123@"));
 
                 doctor.setWorkingHours("07:00-12:00,13:00-18:00");
@@ -90,7 +99,11 @@ public class DataInitializer implements CommandLineRunner{
             if (userRepository.existsByEmail(email)) continue;
 
             Patient patient = new Patient();
-            patient.setFullName("Patient " + i);
+            String firstName = "Patient";
+            String lastName = String.valueOf(i);
+            patient.setFirstName(firstName);
+            patient.setLastName(lastName);
+            patient.setFullName(firstName + " " + lastName);
             patient.setEmail(email);
             patient.setPhoneNumber("0920000" + String.format("%03d", i));
             patient.setIdentityNumber("PAT" + String.format("%04d", i));
@@ -99,10 +112,18 @@ public class DataInitializer implements CommandLineRunner{
             patient.setRole(RoleType.PATIENT);
             patient.setStatus(UserStatus.ACTIVE);
             patient.setAddress("Patient Address " + i);
+            patient.setCity("Ho Chi Minh City");
+            patient.setZipCode("700000");
             patient.setHashedPassword(passwordEncoder.encode("Patient123@"));
 
             patient.setInsuranceNumber("INS" + String.format("%05d", i));
+            patient.setInsuranceId("INS-ID-" + String.format("%05d", i));
             patient.setInsuranceProvider("Insurance Co " + ((i % 5) + 1));
+            patient.setBloodType(i % 4 == 0 ? "A" : i % 4 == 1 ? "B" : i % 4 == 2 ? "AB" : "O");
+            patient.setEmergencyContacts(List.of(
+                new EmergencyContact("093" + String.format("%07d", i), "Parent"),
+                new EmergencyContact("094" + String.format("%07d", i), "Sibling")
+            ));
 
             userRepository.save(patient);
         }
@@ -110,7 +131,7 @@ public class DataInitializer implements CommandLineRunner{
 
     private void createDepartmentListIfNotExists() {
         String[] defaultDepartments = {"General", "Cardiology", "Neurology", "Pediatrics", "Orthopedics",
-            "Dermatology", "Psychiatry", "Oncology", "Gynecology", "Emergency",
+            "Dermatology", "Psychiatry", "Oncology", "Gynecology",
             "Radiology", "Urology", "Gastroenterology", "Ophthalmology", "Otolaryngology",
             "Anesthesiology", "Pathology", "Nephrology", "Endocrinology", "Hematology",
             "Rheumatology", "Pulmonology", "Infectious Diseases", "Physical Therapy", "Nutrition"
