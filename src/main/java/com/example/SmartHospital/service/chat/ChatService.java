@@ -1,5 +1,6 @@
 package com.example.SmartHospital.service.chat;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ import com.example.SmartHospital.repository.DoctorRepository;
 import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.repository.UserRepository;
 import com.example.SmartHospital.service.messaging.WebSocketMessagingService;
+import com.example.SmartHospital.service.storage.MinioStorageService;
 
 import lombok.RequiredArgsConstructor;
 @Service
@@ -31,6 +33,7 @@ public class ChatService {
     private final PatientRepository patientRepository;
     private final OnlineStatusServicePort onlineStatusService;
     private final WebSocketMessagingService websocketMessagingService;
+    private final MinioStorageService minioStorageService;
 
     public ChatMessageResponse createMessage(String senderId, ChatMessageRequest request, UsernamePasswordAuthenticationToken authentication) {
         String receiverId = request.getReceiverId();
@@ -120,8 +123,30 @@ public class ChatService {
         response.setSenderName(senderName);
         response.setTimestamp(message.getTimestamp());
         response.setStatus(message.getStatus());
-        response.setAttachmentUrls(message.getAttachments());
+        response.setAttachmentUrls(resolveAttachmentUrls(message.getAttachments()));
         return response;
+    }
+
+    private List<String> resolveAttachmentUrls(List<String> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> resolvedUrls = new ArrayList<>(attachments.size());
+        for (String attachment : attachments) {
+            if (attachment == null || attachment.isBlank()) {
+                continue;
+            }
+
+            String trimmed = attachment.trim();
+            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                resolvedUrls.add(trimmed);
+            } else {
+                resolvedUrls.add(minioStorageService.toPresignedGetUrl(trimmed));
+            }
+        }
+
+        return resolvedUrls;
     }
 
     public List<ChatMessageResponse> getSpecificChat(String userId, String otherUserId, Authentication authentication) {
