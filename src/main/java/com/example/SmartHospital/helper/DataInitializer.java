@@ -14,8 +14,12 @@ import com.example.SmartHospital.model.Admin;
 import com.example.SmartHospital.model.Department;
 import com.example.SmartHospital.model.Doctor;
 import com.example.SmartHospital.model.EmergencyContact;
+import com.example.SmartHospital.model.MedicalRecord;
 import com.example.SmartHospital.model.Patient;
 import com.example.SmartHospital.repository.DepartmentRepository;
+import com.example.SmartHospital.repository.DoctorRepository;
+import com.example.SmartHospital.repository.MedicalRecordRepository;
+import com.example.SmartHospital.repository.PatientRepository;
 import com.example.SmartHospital.repository.UserRepository;
 
 @Component 
@@ -23,6 +27,9 @@ import com.example.SmartHospital.repository.UserRepository;
 public class DataInitializer implements CommandLineRunner{
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final DoctorRepository doctorRepository;
+    private final PatientRepository patientRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
     private final PasswordEncoder passwordEncoder;
     @Override
     public void run(String... args) throws Exception {
@@ -30,6 +37,7 @@ public class DataInitializer implements CommandLineRunner{
         createAdminIfNotExists();
         createBulkDoctors(5);
         createBulkPatients(50);
+        createSampleMedicalRecords();
     }
 
     private void createAdminIfNotExists() {
@@ -143,6 +151,47 @@ public class DataInitializer implements CommandLineRunner{
                 departmentRepository.save(department);
             }
         }
+    }
+
+    private void createSampleMedicalRecords() {
+        if (medicalRecordRepository.count() > 0) {
+            return;
+        }
+
+        List<Patient> patients = patientRepository.findAll();
+        List<Doctor> doctors = doctorRepository.findAll();
+        if (patients.isEmpty() || doctors.isEmpty()) {
+            return;
+        }
+
+        Patient patient = patients.get(0);
+        Doctor doctor = doctors.get(0);
+
+        MedicalRecord visit = new MedicalRecord();
+        visit.setPatient(patient);
+        visit.setDoctor(doctor);
+        visit.setRecordType("visit");
+        visit.setRecordTitle("Initial Consultation");
+        visit.setSummary("Routine consultation with normal vitals and lifestyle guidance.");
+        visit.setTreatmentNotes("Routine consultation with normal vitals and lifestyle guidance.");
+        visit.setDiagnoses(List.of("Routine checkup"));
+        visit.setAttachments(List.of());
+        visit.setIsDeleted(false);
+        medicalRecordRepository.save(visit);
+
+        MedicalRecord lab = new MedicalRecord();
+        lab.setPatient(patient);
+        lab.setDoctor(doctor);
+        lab.setRecordType("lab_result");
+        lab.setRecordTitle("Complete Blood Count");
+        lab.setSummary("CBC within normal range.");
+        lab.setTreatmentNotes("CBC within normal range.");
+        lab.setLabName("Complete Blood Count");
+        lab.setResultStatus("Normal");
+        lab.setAttachments(List.of());
+        lab.setDiagnoses(List.of("Normal CBC"));
+        lab.setIsDeleted(false);
+        medicalRecordRepository.save(lab);
     }
 
 

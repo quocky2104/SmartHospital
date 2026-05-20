@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 public class PatientMedicalRequestService {
 
     private static final DateTimeFormatter ISO_LOCAL = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final String OPEN_STATUS = "open";
+    private static final String CLOSED_STATUS = "closed";
 
     private final PatientMedicalRequestRepository repository;
     private final PatientRepository patientRepository;
@@ -38,7 +40,7 @@ public class PatientMedicalRequestService {
         entity.setSubject(dto.getSubject());
         entity.setDescription(dto.getDescription());
         entity.setPriority("normal");
-        entity.setStatus("pending");
+        entity.setStatus(OPEN_STATUS);
 
         return toResponse(repository.save(entity));
     }
@@ -81,7 +83,7 @@ public class PatientMedicalRequestService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
-        entity.setStatus("completed");
+        entity.setStatus(CLOSED_STATUS);
         return toResponse(repository.save(entity));
     }
 
@@ -93,7 +95,7 @@ public class PatientMedicalRequestService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
-        entity.setStatus("pending");
+        entity.setStatus(OPEN_STATUS);
         return toResponse(repository.save(entity));
     }
 
@@ -107,8 +109,24 @@ public class PatientMedicalRequestService {
         response.setPatientName(e.getPatient().getFullName());
         response.setCreatedAt(e.getCreatedAt() != null ? ISO_LOCAL.format(e.getCreatedAt()) : null);
         response.setUpdatedAt(e.getUpdatedAt() != null ? ISO_LOCAL.format(e.getUpdatedAt()) : null);
-        response.setStatus(e.getStatus());
+        response.setStatus(normalizeStatus(e.getStatus()));
         response.setResponse(null);
         return response;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null) {
+            return OPEN_STATUS;
+        }
+
+        String normalized = status.trim().toLowerCase();
+        if (normalized.isEmpty()) {
+            return OPEN_STATUS;
+        }
+
+        return switch (normalized) {
+            case "completed", "closed", "resolved", "done" -> CLOSED_STATUS;
+            default -> OPEN_STATUS;
+        };
     }
 }

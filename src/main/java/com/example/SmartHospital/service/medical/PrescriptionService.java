@@ -21,6 +21,7 @@ import com.example.SmartHospital.repository.PrescriptionRepository;
 import com.example.SmartHospital.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import com.example.SmartHospital.service.notification.NotificationService;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class PrescriptionService {
     private final DoctorRepository doctorRepository;
     private final MedicationRepository medicationRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public List<PrescriptionResponse> getMyPrescriptions(String userId) {
         User user = userRepository.findById(userId)
@@ -72,7 +74,21 @@ public class PrescriptionService {
         prescription.setMedicines(medicines);
         prescription.setIsDeleted(false);
 
-        return new PrescriptionResponse(prescriptionRepository.save(prescription));
+        Prescription saved = prescriptionRepository.save(prescription);
+        try {
+            notificationService.notifyUserEvent(
+                patient.getId(),
+                patient.getEmail(),
+                patient.getFullName(),
+                "prescription.created",
+                "New prescription",
+                String.format("Dr. %s issued a prescription", doctor.getFullName()),
+                saved.getId()
+            );
+        } catch (Exception ex) {
+        }
+
+        return new PrescriptionResponse(saved);
     }
 
     public PrescriptionResponse updatePrescription(String doctorId, String prescriptionId, PrescriptionRequest request) {
@@ -105,7 +121,20 @@ public class PrescriptionService {
 
         prescription.setDoctor(doctor);
         prescription.setUpdatedAt(LocalDateTime.now());
-        return new PrescriptionResponse(prescriptionRepository.save(prescription));
+        Prescription saved = prescriptionRepository.save(prescription);
+        try {
+            notificationService.notifyUserEvent(
+                saved.getPatient().getId(),
+                saved.getPatient().getEmail(),
+                saved.getPatient().getFullName(),
+                "prescription.updated",
+                "Prescription updated",
+                String.format("Dr. %s updated your prescription", doctor.getFullName()),
+                saved.getId()
+            );
+        } catch (Exception ex) {
+        }
+        return new PrescriptionResponse(saved);
     }
 
     public boolean softDeletePrescription(String doctorId, String prescriptionId) {
@@ -122,6 +151,18 @@ public class PrescriptionService {
         prescription.setDeletedAt(LocalDateTime.now());
         prescription.setUpdatedAt(LocalDateTime.now());
         prescriptionRepository.save(prescription);
+        try {
+            notificationService.notifyUserEvent(
+                prescription.getPatient().getId(),
+                prescription.getPatient().getEmail(),
+                prescription.getPatient().getFullName(),
+                "prescription.deleted",
+                "Prescription removed",
+                String.format("Dr. %s removed a prescription", doctor.getFullName()),
+                prescription.getId()
+            );
+        } catch (Exception ex) {
+        }
         return true;
     }
 
@@ -136,6 +177,18 @@ public class PrescriptionService {
         }
 
         prescriptionRepository.delete(prescription);
+        try {
+            notificationService.notifyUserEvent(
+                prescription.getPatient().getId(),
+                prescription.getPatient().getEmail(),
+                prescription.getPatient().getFullName(),
+                "prescription.hard_deleted",
+                "Prescription permanently removed",
+                String.format("Dr. %s permanently deleted a prescription", doctor.getFullName()),
+                prescription.getId()
+            );
+        } catch (Exception ex) {
+        }
         return true;
     }
 

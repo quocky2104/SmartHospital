@@ -24,6 +24,12 @@ public class MedicalRecord {
     @Id
     private String id;
 
+    private String recordType;
+
+    private String recordTitle;
+
+    private String summary;
+
     @PrePersist
     public void createIdIfNotPresent() {
         if (this.id == null || this.id.isEmpty()) {
@@ -33,6 +39,16 @@ public class MedicalRecord {
     }
 
     private String treatmentNotes;
+
+    private String labName;
+
+    private String resultValue;
+
+    private String resultUnit;
+
+    private String referenceRange;
+
+    private String resultStatus;
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

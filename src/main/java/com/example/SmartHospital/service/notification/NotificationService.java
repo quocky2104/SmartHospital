@@ -26,6 +26,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final INotificationSender notificationSender;
     private final ObjectProvider<RabbitTemplate> rabbitTemplateProvider;
+    private final com.example.SmartHospital.service.messaging.WebSocketMessagingService webSocketMessagingService;
 
     private void sendAppointmentEvent(
         String recipientUserId,
@@ -60,6 +61,7 @@ public class NotificationService {
     @Transactional
     public void notifyDoctorAppointmentEvent(Appointment appointment, String eventType, String message) {
         String doctorId = appointment.getDoctor().getId();
+        // Send WebSocket notification immediately, so the doctor receives real-time alerts even if RabbitMQ is down
         sendAppointmentEvent(
             doctorId,
             appointment.getDoctor().getEmail(),
@@ -68,6 +70,9 @@ public class NotificationService {
             eventType,
             message
         );
+        // Attempt to publish to RabbitMQ
+        // but if it fails, the WebSocket notification will still have been sent
+        // The email will also still be queued via RabbitMQ, so the notification is not lost and retry
         publishRabbitIfAvailable("doctor", doctorId, buildPayload(appointment, eventType, message));
         queueEmailNotification(appointment.getDoctor().getEmail(), "Appointment Update", message);
     }
@@ -105,6 +110,41 @@ public class NotificationService {
             .stream()
             .map(NotificationResponse::new)
             .toList();
+    }
+
+    @Transactional
+    public void notifyUserEvent(
+        String recipientUserId,
+        String recipientEmail,
+        String recipientName,
+        String eventType,
+        String title,
+        String message,
+        String referenceId
+    ) {
+        com.example.SmartHospital.model.Notification notification = new com.example.SmartHospital.model.Notification();
+        notification.setRecipientUserId(recipientUserId);
+        notification.setType(eventType);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        // store reference id in appointmentId field for compatibility (may be null)
+        notification.setAppointmentId(referenceId);
+        notification.setIsRead(false);
+        notificationRepository.save(notification);
+
+        // send WebSocket notification immediately
+        try {
+            webSocketMessagingService.sendMessageToUser("system", recipientUserId, new NotificationResponse(notification));
+        } catch (Exception ex) {
+            log.warn("Failed to send websocket notification to {}: {}", recipientUserId, ex.getMessage());
+        }
+
+        // attempt to queue an email notification for durability
+        try {
+            queueEmailNotification(recipientEmail, title, message);
+        } catch (Exception ex) {
+            log.warn("Failed to queue email notification for {}: {}", recipientEmail, ex.getMessage());
+        }
     }
 
     @Transactional

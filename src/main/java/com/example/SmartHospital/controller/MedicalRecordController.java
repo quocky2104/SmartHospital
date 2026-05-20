@@ -51,6 +51,16 @@ public class MedicalRecordController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Medical records fetched", medicalRecordService.getMyMedicalRecords(userId)));
     }
 
+    @Operation(summary = "Get a patient's medical records", description = "Doctors can view a patient's medical history")
+    @PreAuthorize("hasRole('DOCTOR')")
+    @GetMapping("/patients/{patientId}")
+    public ResponseEntity<ApiResponse<List<MedicalRecordResponse>>> getPatientMedicalRecords(
+        @AuthenticationPrincipal String userId,
+        @PathVariable String patientId
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(200, "Patient medical records fetched", medicalRecordService.getPatientMedicalRecords(userId, patientId)));
+    }
+
     @Operation(summary = "Create a medical record", description = "Doctor in charge creates a new medical record for a patient")
     @PreAuthorize("hasRole('DOCTOR')")
     @PostMapping
@@ -113,7 +123,7 @@ public class MedicalRecordController {
         }
 
         try {
-            List<String> uploadedPaths = minioStorageService.uploadAdditionalFiles(files, userId);
+            List<String> uploadedPaths = minioStorageService.uploadMedicalRecordPdfs(files, userId);
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(201, "Files uploaded successfully", uploadedPaths));
         } catch (Exception e) {

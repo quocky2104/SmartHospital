@@ -10,6 +10,8 @@ import com.example.SmartHospital.model.MedicalRecord;
 @Repository
 public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, String> {
 	Optional<MedicalRecord> findByIdAndIsDeletedFalse(String id);
+	List<MedicalRecord> findAllByPatient_IdAndIsDeletedFalseOrderByCreatedAtDesc(String patientId);
+	List<MedicalRecord> findAllByDoctor_IdAndIsDeletedFalseOrderByCreatedAtDesc(String doctorId);
 	List<MedicalRecord> findAllByPatient_IdAndIsDeletedFalse(String patientId);
 	List<MedicalRecord> findAllByDoctor_IdAndIsDeletedFalse(String doctorId);
 }
