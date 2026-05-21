@@ -37,7 +37,7 @@ public class Appointment {
     @Column(name = "appointment_type", length = 100)
     private String type;
 
-    @Lob
+    @Column(columnDefinition="TEXT")
     private String notes;
     private Integer rating;
 

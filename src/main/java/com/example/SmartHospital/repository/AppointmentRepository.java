@@ -15,6 +15,9 @@ import com.example.SmartHospital.model.Doctor;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, String> {
+    
+    List<Appointment> findTop5ByPatient_IdOrderByAppointmentDateTimeDesc(String patientId);
+    List<Appointment> findTop5ByDoctor_IdOrderByAppointmentDateTimeDesc(String doctorId);
     @Query("""
         SELECT a FROM Appointment a
         WHERE a.patient.id = :patientId
