@@ -127,6 +127,9 @@ public class ChatService {
         return response;
     }
 
+    // Resolves attachment URLs by checking if they are already full URLs or 
+    // if they need to be converted to presigned URLs using MinioStorageService
+    // so that the frontend can directly use them to display or download attachments
     private List<String> resolveAttachmentUrls(List<String> attachments) {
         if (attachments == null || attachments.isEmpty()) {
             return List.of();

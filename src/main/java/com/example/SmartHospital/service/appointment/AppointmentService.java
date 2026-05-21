@@ -2,6 +2,7 @@ package com.example.SmartHospital.service.appointment;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -33,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
+    private static final DateTimeFormatter APPOINTMENT_NOTIFICATION_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final PatientRepository patientRepository;
@@ -156,7 +159,7 @@ public class AppointmentService {
         notificationService.notifyPatientAppointmentEvent(
             saved,
             "APPOINTMENT_ACCEPTED",
-            "Your appointment was accepted and scheduled for " + saved.getAppointmentDateTime()
+            "Your appointment was accepted and scheduled for " + saved.getAppointmentDateTime().format(APPOINTMENT_NOTIFICATION_FORMAT)
         );
 
         return new AppointmentResponse(saved);
@@ -324,10 +327,7 @@ public class AppointmentService {
                                 .toList();
     }
 
-    /**
-     * Get available timeslots for a specific doctor on a given date.
-     * Returns 30-minute slots from working hours, excluding booked times.
-     */
+    // Utility method to find available 30-minute timeslots for a doctor on a given date
     public List<String> findAvailableTimeslots(String doctorId, LocalDate date) {
         Doctor doctor = doctorRepository.findById(doctorId)
             .orElseThrow(() -> new RuntimeException("Doctor not found"));
@@ -378,6 +378,7 @@ public class AppointmentService {
         return slots;
     }
 
+    // Utility method to get all doctors available for booking in a department (excluding Emergency)
     public List<DoctorDTO> getBookingDoctors(String departmentId) {
         return doctorRepository.findAll().stream()
             .filter(d -> d.getStatus() != UserStatus.DELETED)

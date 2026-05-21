@@ -55,9 +55,6 @@ public class SecurityConfig {
                     "/social-posts/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
-                    "/chat-test.html", // remove this in production, only for testing
-                    "/appointment-approval-test.html", // remove this in production, only for testing
-                    "/appointment-booking-test.html", // remove this in production, only for testing
                     "/ws/**"
                 ).permitAll()
                     .anyRequest().authenticated())
