@@ -51,7 +51,7 @@ public class AppointmentController {
         summary = "Get patient's appointments",
         description = "Retrieve a paginated list of appointments for the authenticated patient with optional search and sorting"
     )
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')")
     @GetMapping("/patient/getAppointments")
     public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getPatientAppointments(
         @AuthenticationPrincipal String userId,
