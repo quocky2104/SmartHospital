@@ -3,9 +3,9 @@ package com.example.SmartHospital.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.example.SmartHospital.helper.CustomIdGenerator;
-
 import org.hibernate.annotations.ColumnDefault;
+
+import com.example.SmartHospital.helper.CustomIdGenerator;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;

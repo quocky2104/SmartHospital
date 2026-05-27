@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 import com.example.SmartHospital.enums.RequestStatus;
 import com.example.SmartHospital.enums.RequestType;
-import com.example.SmartHospital.enums.SeverityLevel;
 import com.example.SmartHospital.helper.CustomIdGenerator;
 
 import jakarta.persistence.Column;
@@ -39,9 +38,6 @@ public class Request {
 
     @Column(nullable=false)
     private LocalDateTime reportedAt;
-
-    @Column(nullable = true)
-    private SeverityLevel severity;
 
     @ManyToOne(optional=false)
     @JoinColumn(name="patient_id")
