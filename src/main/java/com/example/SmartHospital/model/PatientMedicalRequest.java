@@ -26,22 +26,16 @@ public class PatientMedicalRequest {
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
-    /** medical | administrative | emergency */
-    @Column(name = "request_type", nullable = false, length = 32)
-    private String requestType;
-
     @Column(nullable = false, length = 500)
     private String subject;
 
+    // Store the json
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    /** opened | closed */
     @Column(nullable = false, length = 32)
-    private String priority;
-
-    /** pending | in_review | responded | completed | submitted */
-    @Column(nullable = false, length = 32)
-    private String status = "pending";
+    private String status = "opened";
 
     @ManyToOne
     @JoinColumn(name = "assigned_to_id")

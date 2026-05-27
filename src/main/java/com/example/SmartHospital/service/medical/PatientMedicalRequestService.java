@@ -36,10 +36,8 @@ public class PatientMedicalRequestService {
 
         PatientMedicalRequest entity = new PatientMedicalRequest();
         entity.setPatient(patient);
-        entity.setRequestType(dto.getType());
         entity.setSubject(dto.getSubject());
         entity.setDescription(dto.getDescription());
-        entity.setPriority("normal");
         entity.setStatus(OPEN_STATUS);
 
         return toResponse(repository.save(entity));
@@ -102,7 +100,6 @@ public class PatientMedicalRequestService {
     private MedicalRequestResponse toResponse(PatientMedicalRequest e) {
         MedicalRequestResponse response = new MedicalRequestResponse();
         response.setId(e.getId());
-        response.setType(e.getRequestType());
         response.setSubject(e.getSubject());
         response.setDescription(e.getDescription());
         response.setPatientId(e.getPatient().getId());

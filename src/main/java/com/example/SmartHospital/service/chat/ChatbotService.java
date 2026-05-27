@@ -171,8 +171,8 @@ public class ChatbotService {
                 int count = 0;
                 for (PatientMedicalRequest r : requests) {
                     if (count >= 3) break;
-                    sb.append(String.format("- Subject: %s, Status: %s, Priority: %s\n", 
-                        r.getSubject(), r.getStatus(), r.getPriority()));
+                    sb.append(String.format("- Subject: %s, Status: %s\n", 
+                        r.getSubject(), r.getStatus()));
                     count++;
                 }
             }
